@@ -41,6 +41,15 @@ from utils.ds_utils import get_train_ds_config
 from utils.module.lora import convert_linear_layer_to_lora, convert_lora_to_linear_layer, only_optimize_lora_parameters
 from utils.model.model_utils import create_hf_model
 
+# ================== 自定义模型注册 ==================
+from transformers import AutoConfig, AutoModelForCausalLM
+from model.memories.modeling_memory import LaCTQwen3Model
+from model.configuration_qwen import MemorizedQwenConfig
+
+AutoConfig.register("memorized_qwen", MemorizedQwenConfig)
+AutoModelForCausalLM.register(MemorizedQwenConfig, LaCTQwen3Model)
+print("✅ 已注册自定义模型：MemorizedQwenConfig -> LaCTQwen3Model")
+
 # add flash attention
 from utils.flash_attention.llama_flash_att import replace_llama_attn_with_flash_attn
 from utils.flash_attention.bloom_flash_att import replace_bloom_attn_with_flash_attn
@@ -243,12 +252,25 @@ def main():
     # Qwen 补丁：如果没有 pad_token，将其设为 eos_token
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    
+
+
+    # 这部分代码可以不要
+    print("="*60)
+    print(f"Loading MemorizedQwenConfig from {args.model_name_or_path}...")
+    config = MemorizedQwenConfig.from_pretrained(args.model_name_or_path)
+    print(f"config.model_type = {config.model_type}")
+    print("="*60)
+    # 这部分代码可以不要
+
+
 
     model = create_hf_model(AutoModelForCausalLM,
                             args.model_name_or_path,
                             tokenizer,
                             ds_config=ds_config,
-                            disable_dropout=args.disable_dropout
+                            disable_dropout=args.disable_dropout,
+                            config=config  # <--- 关键：必须显式传入 config
                             )
     
     # some CL methods can be realized by peft
