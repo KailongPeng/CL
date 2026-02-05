@@ -1,5 +1,5 @@
 # D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\train_seq_naive.sh
-#!bin/bash
+
 # port=$(shuf -i25000-30000 -n1)
 # deepspeed --include=localhost:0,1,2,3,4,5,6,7 --master_port $port training/main.py  \
 #     --data_path /mnt/data/user/zhang_yuansen/LLM-CL_Benchmark \
@@ -23,54 +23,6 @@
 #     --output_dir /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive > /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive/train.log 2>&1 &
 
 
-
-# # for slurm
-
-# # for slurm running
-# srun --partition=xai --mpi=pmi2 --gres=gpu:8 -n1 --ntasks-per-node=1 --job-name=asb-llama --kill-on-bad-exit=1 /mnt/petrelfs/wangxiao/miniconda3/envs/cl/bin/deepspeed --master_port 51459 training/main.py  \
-#     --data_path /mnt/petrelfs/wangxiao/DATA/LLM-CL-Benchmark/LLM-CL-Benchmark_5000 \
-#     --dataset_name C-STANCE,FOMC,MeetingBank,Py150,ScienceQA,NumGLUE-cm,NumGLUE-ds,20Minuten \
-#     --model_name_or_path /mnt/petrelfs/wangxiao/MODELS/llama2HF/7B-Chat \
-#     --per_device_train_batch_size 2 \
-#     --per_device_eval_batch_size 16 \
-#     --max_prompt_len 1024 \
-#     --max_ans_len 512 \
-#     --learning_rate 1e-5 \
-#     --weight_decay 0. \
-#     --num_train_epochs 5,3,7,5,3,5,5,7 \
-#     --gradient_accumulation_steps 16 \
-#     --lr_scheduler_type cosine \
-#     --num_warmup_steps 0 \
-#     --seed 1234 \
-#     --zero_stage 3 \
-#     --deepspeed \
-#     --print_loss \
-#     --CL_method base \
-#     --output_dir /mnt/petrelfs/wangxiao/LLM-Continual-Learning/CKPT/naive/llama7b-chat > llama2-7b-naive.log 2>&1 &
-
-
-
-# srun --partition=xai --mpi=pmi2 --gres=gpu:8 -n1 --ntasks-per-node=1 --job-name=asb-llama --kill-on-bad-exit=1 /mnt/petrelfs/wangxiao/miniconda3/envs/cl/bin/deepspeed --master_port 51459 training/main.py  \
-#     --data_path /mnt/petrelfs/wangxiao/DATA/LLM-CL-Benchmark/LLM-CL-Benchmark_5000 \
-#     --dataset_name C-STANCE,FOMC,MeetingBank,Py150,ScienceQA,NumGLUE-cm,NumGLUE-ds,20Minuten \
-#     --model_name_or_path /mnt/petrelfs/wangxiao/MODELS/vicuna-7b-v1.5 \
-#     --per_device_train_batch_size 2 \
-#     --per_device_eval_batch_size 16 \
-#     --max_prompt_len 1024 \
-#     --max_ans_len 512 \
-#     --learning_rate 1e-5 \
-#     --weight_decay 0. \
-#     --num_train_epochs 5,3,7,5,3,5,5,7 \
-#     --gradient_accumulation_steps 16 \
-#     --lr_scheduler_type cosine \
-#     --num_warmup_steps 0 \
-#     --seed 1234 \
-#     --zero_stage 3 \
-#     --deepspeed \
-#     --print_loss \
-#     --CL_method base \
-#     --output_dir /mnt/petrelfs/wangxiao/LLM-Continual-Learning/CKPT/naive/vicuna7b > vicuna-7b-naive.log 2>&1 &
-
 #!/bin/bash
 # 随便生成一个端口
 port=$(shuf -i25000-30000 -n1)
@@ -86,7 +38,7 @@ mkdir -p $OUTPUT_DIR
 echo ">>> 开始冒烟测试..."
 echo ">>> 目标：验证模型加载、Tokenizer修复、DeepSpeed启动是否正常"
 
-deepspeed --include localhost:7 --master_port $port training/main.py \
+deepspeed --include localhost:7 --master_port $port training/main.pQDy \
     --data_path $DATA_PATH \
     --dataset_name C-STANCE \
     --model_name_or_path $MODEL_PATH \
