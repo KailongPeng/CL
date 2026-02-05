@@ -1,3 +1,4 @@
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\training\main.py
 #!/usr/bin/env python
 # Copyright (c) Microsoft Corporation.
 # SPDX-License-Identifier: Apache-2.0
@@ -44,8 +45,8 @@ from utils.model.model_utils import create_hf_model
 from utils.flash_attention.llama_flash_att import replace_llama_attn_with_flash_attn
 from utils.flash_attention.bloom_flash_att import replace_bloom_attn_with_flash_attn
 
-replace_llama_attn_with_flash_attn()
-replace_bloom_attn_with_flash_attn()
+# replace_llama_attn_with_flash_attn()
+# replace_bloom_attn_with_flash_attn()
 
 # my_peft中修改了lora相关的逻辑
 from model.Replay.LFPT5 import getInitialPrompt
@@ -233,16 +234,22 @@ def main():
     # Barrier to make sure all process are ready to train
     torch.distributed.barrier()
 
-    tokenizer = load_hf_tokenizer(args.model_name_or_path, fast_tokenizer=True)
+    tokenizer = load_hf_tokenizer(args.model_name_or_path, fast_tokenizer=True, trust_remote_code=True)
+
     # default the LLM is decoder only model, so padding side is left
     assert tokenizer.padding_side == 'left'
     assert tokenizer.truncation_side == "left"
+
+    # Qwen 补丁：如果没有 pad_token，将其设为 eos_token
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     model = create_hf_model(AutoModelForCausalLM,
                             args.model_name_or_path,
                             tokenizer,
                             ds_config=ds_config,
-                            disable_dropout=args.disable_dropout
+                            disable_dropout=args.disable_dropout,
+                            trust_remote_code=True
                             )
     
     # some CL methods can be realized by peft
@@ -405,20 +412,16 @@ def main():
         return optimizer, lr_scheduler
     
     if args.CL_method=="PP" or args.CL_method=="L2P":
-        if "opt" in args.model_name_or_path.lower():
-            embed_tokens_shape = model.model.decoder.embed_tokens.weight.shape
+        model_path_lower = args.model_name_or_path.lower()
+        if "opt" in model_path_lower:
             embed_tokens = model.model.decoder.embed_tokens
-            
-            args.embed_tokens_dim = embed_tokens_shape[1]
-            args.embed_tokens_length = embed_tokens_shape[0]
-            args.embed_tokens = embed_tokens
-        elif "llama" in args.model_name_or_path.lower():
-            embed_tokens_shape = model.model.embed_tokens.weight.shape
+        elif "llama" in model_path_lower or "qwen" in model_path_lower:
             embed_tokens = model.model.embed_tokens
-            
-            args.embed_tokens_dim = embed_tokens_shape[1]
-            args.embed_tokens_length = embed_tokens_shape[0]
-            args.embed_tokens = embed_tokens
+
+        embed_tokens_shape = embed_tokens.weight.shape
+        args.embed_tokens_dim = embed_tokens_shape[1]
+        args.embed_tokens_length = embed_tokens_shape[0]
+        args.embed_tokens = embed_tokens
             
         if args.CL_method=="PP":
             args.prefix_len = 20

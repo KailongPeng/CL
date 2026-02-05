@@ -1,3 +1,4 @@
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\training\params.py
 from model.Dynamic_network.PP import PP
 from model.Dynamic_network.L2P import L2P
 from model.Regular.LwF import LwF
