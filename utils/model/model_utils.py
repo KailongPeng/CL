@@ -10,7 +10,7 @@ from transformers import (
     AutoModel,
 )
 from huggingface_hub import snapshot_download
-from transformers.deepspeed import HfDeepSpeedConfig
+from transformers.integrations import HfDeepSpeedConfig
 from transformers import LlamaForCausalLM, LlamaConfig
 
 

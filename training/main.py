@@ -234,7 +234,7 @@ def main():
     # Barrier to make sure all process are ready to train
     torch.distributed.barrier()
 
-    tokenizer = load_hf_tokenizer(args.model_name_or_path, fast_tokenizer=True, trust_remote_code=True)
+    tokenizer = load_hf_tokenizer(args.model_name_or_path, fast_tokenizer=True)
 
     # default the LLM is decoder only model, so padding side is left
     assert tokenizer.padding_side == 'left'
@@ -248,8 +248,7 @@ def main():
                             args.model_name_or_path,
                             tokenizer,
                             ds_config=ds_config,
-                            disable_dropout=args.disable_dropout,
-                            trust_remote_code=True
+                            disable_dropout=args.disable_dropout
                             )
     
     # some CL methods can be realized by peft
