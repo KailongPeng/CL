@@ -303,7 +303,13 @@ def main():
         model = get_peft_model(model, peft_config)
 
         # 验证逻辑：确保只训练 LoRA 参数
+        # ====== 增加显眼的打印格式 ======
+        print("\n" + "="*50)
+        print(f"✅ LoRA 配置生效！正在针对 {peft_config.target_modules} 进行训练")
         model.print_trainable_parameters()  # 预期结果：trainable params 应该在 1% - 5% 之间
+        print("="*50 + "\n")
+        # ==============================
+
         for name, param in model.named_parameters():
             if "lora" in name:
                 param.requires_grad = True
