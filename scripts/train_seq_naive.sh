@@ -86,7 +86,7 @@ mkdir -p $OUTPUT_DIR
 echo ">>> 开始冒烟测试..."
 echo ">>> 目标：验证模型加载、Tokenizer修复、DeepSpeed启动是否正常"
 
-deepspeed --num_gpus=1 training/main.py \
+deepspeed --include localhost:7 --master_port $port training/main.py \
     --data_path $DATA_PATH \
     --dataset_name C-STANCE \
     --model_name_or_path $MODEL_PATH \
@@ -102,11 +102,11 @@ deepspeed --num_gpus=1 training/main.py \
     --num_warmup_steps 0 \
     --seed 42 \
     --zero_stage 3 \
-    --offload \
     --deepspeed \
     --print_loss \
     --CL_method base \
     --output_dir $OUTPUT_DIR > $OUTPUT_DIR/test.log 2>&1 &
+
 
 echo ">>> 任务已提交！请立即执行下面这行命令查看日志："
 echo "tail -f $OUTPUT_DIR/test.log"

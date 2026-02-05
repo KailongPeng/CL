@@ -1,3 +1,4 @@
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\utils\data\data_utils.py
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # This software may be used and distributed according to the terms of the Llama 2 Community License Agreement.
 """
@@ -326,4 +327,6 @@ def create_prompt_dataset(local_rank,
 
     if distributed:
         torch.distributed.barrier()
-    return torch.load(train_fname), torch.load(eval_fname), torch.load(test_fname)
+    
+    # 修复 PyTorch 2.6+ 报错: weights_only=False 允许加载自定义类 PromptDataset
+    return torch.load(train_fname, weights_only=False), torch.load(eval_fname, weights_only=False), torch.load(test_fname, weights_only=False)
