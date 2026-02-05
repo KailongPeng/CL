@@ -23,6 +23,7 @@
 #     --output_dir /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive > /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive/train.log 2>&1 &
 
 
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\train_seq_naive.sh
 #!/bin/bash
 # 随便生成一个端口
 port=$(shuf -i25000-30000 -n1)
@@ -38,7 +39,7 @@ mkdir -p $OUTPUT_DIR
 echo ">>> 开始冒烟测试..."
 echo ">>> 目标：验证模型加载、Tokenizer修复、DeepSpeed启动是否正常"
 
-deepspeed --include localhost:7 --master_port $port training/main.pQDy \
+deepspeed --include localhost:7 --master_port $port training/main.py \
     --data_path $DATA_PATH \
     --dataset_name C-STANCE \
     --model_name_or_path $MODEL_PATH \
@@ -56,7 +57,7 @@ deepspeed --include localhost:7 --master_port $port training/main.pQDy \
     --zero_stage 3 \
     --deepspeed \
     --print_loss \
-    --CL_method base \
+    --CL_method lora \
     --output_dir $OUTPUT_DIR > $OUTPUT_DIR/test.log 2>&1 &
 
 

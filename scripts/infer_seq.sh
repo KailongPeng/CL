@@ -15,7 +15,7 @@
 #     --inference_output_path /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive/predictions > /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive/infer.log 2>&1 &
 
 
-
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\infer_seq.sh
 #!/bin/bash
 # 随机生成端口
 port=$(shuf -i25000-30000 -n1)
@@ -47,7 +47,7 @@ deepspeed --include localhost:7 --master_port $port inference/infer_single.py \
     --data_path $DATA_PATH \
     --inference_tasks C-STANCE \
     --model_name_or_path $BASE_MODEL_PATH \
-    --inference_model_path ${TRAIN_OUTPUT_DIR}/0 \
+    --inference_model_path ${TRAIN_OUTPUT_DIR} \
     --inference_batch 1 \
     --max_prompt_len 256 \
     --max_ans_len 128 \

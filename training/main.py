@@ -293,12 +293,22 @@ def main():
         from peft import get_peft_model, LoraConfig, TaskType
         
         peft_config = LoraConfig(
-            task_type=TaskType.CAUSAL_LM, r=8, lora_alpha=32, lora_dropout=0.1
+            task_type=TaskType.CAUSAL_LM,
+            inference_mode=False, # 告诉 PEFT “我现在要训练”，它会启用 Dropout，并确保梯度可以计算。
+            r=64,  # 秩（Rank）。这是 LoRA 中最重要的参数，决定了外挂模块的“大小”和“容量”
+            lora_alpha=128, # 典型的 2倍 r 设置，稳定. 缩放系数alpha  LoRA 更新权重的公式是 $$W_{new} = W_{old} + \frac{\alpha}{r} \cdot (A \times B)$$
+            lora_dropout=0.05, # 在训练过程中，随机把 5% 的 LoRA 神经元输出置为 0。防止过拟合
+            target_modules=["gate_proj", "up_proj", "down_proj"], 
         )
         model = get_peft_model(model, peft_config)
+
+        # 验证逻辑：确保只训练 LoRA 参数
+        model.print_trainable_parameters()  # 预期结果：trainable params 应该在 1% - 5% 之间
         for name, param in model.named_parameters():
-            if name.find("lora") != -1:
+            if "lora" in name:
                 param.requires_grad = True
+            else:
+                param.requires_grad = False
     
     train_task_list = {}
     eval_task_list = {}
