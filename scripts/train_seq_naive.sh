@@ -29,9 +29,14 @@
 port=$(shuf -i25000-30000 -n1)
 
 # ====== 👇 请修改这里 👇 ======
-MODEL_PATH="/path/to/your/Qwen-7B-Chat" 
+tag="qwen"
+if [ "$tag" == "qwen" ]; then
+    MODEL_PATH="/path/to/your/Qwen-0.6" 
+else
+    MODEL_PATH="/path/to/your/memorized_qwen" 
+fi
 DATA_PATH="/path/to/your/LLM-CL_Benchmark"
-OUTPUT_DIR="/path/to/your/outputs_LLM-CL/debug_test"
+OUTPUT_DIR="/path/to/your/outputs_LLM-CL/debug_test/${tag}"
 # ==============================
 
 mkdir -p $OUTPUT_DIR
