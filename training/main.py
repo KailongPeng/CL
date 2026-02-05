@@ -43,8 +43,8 @@ from utils.model.model_utils import create_hf_model
 
 # ================== 自定义模型注册 ==================
 from transformers import AutoConfig, AutoModelForCausalLM
-from model.memories.modeling_memory import LaCTQwen3Model
-from model.configuration_qwen import MemorizedQwenConfig
+from models.memories.modeling_memory import LaCTQwen3Model
+from models.configuration_qwen import MemorizedQwenConfig
 
 AutoConfig.register("memorized_qwen", MemorizedQwenConfig)
 AutoModelForCausalLM.register(MemorizedQwenConfig, LaCTQwen3Model)
@@ -269,8 +269,7 @@ def main():
                             args.model_name_or_path,
                             tokenizer,
                             ds_config=ds_config,
-                            disable_dropout=args.disable_dropout,
-                            config=config  # <--- 关键：必须显式传入 config
+                            disable_dropout=args.disable_dropout
                             )
     
     # some CL methods can be realized by peft
