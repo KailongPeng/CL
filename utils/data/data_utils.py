@@ -249,7 +249,8 @@ def get_prompt_dataset(current_dataset, raw_dataset, add_sys_prefix=False, sampl
     else:
         sample_length = len(current_dataset)
     
-    sample_length = 10
+    # # testMode
+    # sample_length = 10
 
     for i, tmp_data in enumerate(current_dataset):
         if i==sample_length:

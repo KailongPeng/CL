@@ -31,7 +31,7 @@ port=$(shuf -i25000-30000 -n1)
 # ====== 👇 请修改这里 👇 ======
 tag="qwen"
 if [ "$tag" == "qwen" ]; then
-    MODEL_PATH="/path/to/your/Qwen-0.6" 
+    MODEL_PATH="/path/to/your/Qwen-0.6B" 
 else
     MODEL_PATH="/path/to/your/memorized_qwen" 
 fi
@@ -52,14 +52,14 @@ deepspeed --include localhost:7 --master_port $port training/main.py \
     --per_device_eval_batch_size 1 \
     --gradient_accumulation_steps 1 \
     --max_prompt_len 256 \
-    --max_ans_len 128 \
+    --max_ans_len 128\
     --learning_rate 1e-5 \
     --weight_decay 0. \
     --num_train_epochs 1 \
     --lr_scheduler_type cosine \
     --num_warmup_steps 0 \
     --seed 42 \
-    --zero_stage 3 \
+    --zero_stage 2 \
     --deepspeed \
     --print_loss \
     --CL_method lora \
