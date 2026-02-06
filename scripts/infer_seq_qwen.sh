@@ -1,4 +1,4 @@
-# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\infer_seq.sh
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\infer_seq_qwen.sh
 # #!bin/bash
 # port=$(shuf -i25000-30000 -n1)
 # deepspeed --include=localhost:0 --master_port $port inference/infer_single.py  \
@@ -15,7 +15,7 @@
 #     --inference_output_path /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive/predictions > /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive/infer.log 2>&1 &
 
 
-# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\infer_seq.sh
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\infer_seq_qwen.sh
 #!/bin/bash
 # 随机生成端口
 port=$(shuf -i25000-30000 -n1)

@@ -1,4 +1,4 @@
-# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\train_seq_naive.sh
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\train_seq_naive_mem.sh
 
 # port=$(shuf -i25000-30000 -n1)
 # deepspeed --include=localhost:0,1,2,3,4,5,6,7 --master_port $port training/main.py  \
@@ -23,7 +23,7 @@
 #     --output_dir /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive > /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive/train.log 2>&1 &
 
 
-# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\train_seq_naive.sh
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\train_seq_naive_mem.sh
 #!/bin/bash
 # 随便生成一个端口
 port=$(shuf -i25000-30000 -n1)
@@ -44,18 +44,18 @@ mkdir -p $OUTPUT_DIR
 echo ">>> 开始冒烟测试..."
 echo ">>> 目标：验证模型加载、Tokenizer修复、DeepSpeed启动是否正常"
 
-deepspeed --include localhost:7 --master_port $port training/main.py \
+deepspeed --include localhost:4,5,6,7 --master_port $port training/main.py \
     --data_path $DATA_PATH \
-    --dataset_name C-STANCE \
+    --dataset_name C-STANCE,FOMC,MeetingBank,Py150,ScienceQA,NumGLUE-cm,NumGLUE-ds,20Minuten \
     --model_name_or_path $MODEL_PATH \
     --per_device_train_batch_size 1 \
-    --per_device_eval_batch_size 1 \
-    --gradient_accumulation_steps 16 \
-    --max_prompt_len 256 \
-    --max_ans_len 128\
+    --per_device_eval_batch_size 16 \
+    --gradient_accumulation_steps 8 \
+    --max_prompt_len 2048 \
+    --max_ans_len 512\
     --learning_rate 1e-5 \
     --weight_decay 0. \
-    --num_train_epochs 1 \
+    --num_train_epochs 5,3,7,5,3,5,5,7 \
     --lr_scheduler_type cosine \
     --num_warmup_steps 0 \
     --seed 42 \
@@ -63,7 +63,7 @@ deepspeed --include localhost:7 --master_port $port training/main.py \
     --deepspeed \
     --print_loss \
     --CL_method lora \
-    --num_sinks 0 \
+    --num_sinks 128 \
     --use_sink False \
     --sliding_window 2048 \
     --segment_size 2048 \

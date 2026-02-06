@@ -267,7 +267,7 @@ def main():
     print("="*60)
     # 这部分代码可以不要
 
-
+    print(f"ds_config={ds_config}")
 
     model = create_hf_model(AutoModelForCausalLM,
                             args.model_name_or_path,
