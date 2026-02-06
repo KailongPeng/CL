@@ -50,7 +50,7 @@ deepspeed --include localhost:7 --master_port $port training/main.py \
     --model_name_or_path $MODEL_PATH \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 1 \
-    --gradient_accumulation_steps 1 \
+    --gradient_accumulation_steps 16 \
     --max_prompt_len 256 \
     --max_ans_len 128\
     --learning_rate 1e-5 \

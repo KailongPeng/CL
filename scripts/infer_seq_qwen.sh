@@ -50,7 +50,7 @@ echo ">>> 加载微调权重: $TRAIN_OUTPUT_DIR/0"
 
 deepspeed --include localhost:4,5,6,7 --master_port $port inference/infer_single.py \
     --data_path $DATA_PATH \
-    --inference_tasks C-STANCE,FOMC,MeetingBank,Py150,ScienceQA,NumGLUE-cm,NumGLUE-ds,20Minuten \
+    --inference_tasks C-STANCE,FOMC,MeetingBank,Py150,ScienceQA,NumGLUE-cm,NumGLUE-ds \
     --model_name_or_path $BASE_MODEL_PATH \
     --inference_model_path ${TRAIN_OUTPUT_DIR} \
     --inference_batch 1 \

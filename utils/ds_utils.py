@@ -39,7 +39,7 @@ def get_train_ds_config(offload,
         "steps_per_print": 10,
         "zero_optimization": zero_opt_dict,
         "bfloat16": {
-            "enabled": "auto",
+            "enabled": True,
             # "loss_scale": 0,
             # "loss_scale_window": 1000,
             # "initial_scale_power": 16,

@@ -1,3 +1,4 @@
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\metrics.py
 ## 默认模型在测试时输出的顺序和测试集顺序相同
 ## The inputs must not be shuffled during evaluation.
 
