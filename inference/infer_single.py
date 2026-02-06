@@ -1,3 +1,4 @@
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\inference\infer_single.py
 """
     >>> prompt = "Hey, are you conscious? Can you talk to me?"
     >>> inputs = tokenizer(prompt, return_tensors="pt")
@@ -52,6 +53,13 @@ from model.Dynamic_network.PP import PP, convert_PP_model
 from model.Dynamic_network.L2P import convert_L2P_model
 
 # dist.init_process_group(backend='nccl')
+
+from models.configuration_qwen import MemorizedQwenConfig
+from models.memories.modeling_memory import LaCTQwen3Model
+from transformers import AutoConfig, AutoModelForCausalLM
+
+AutoConfig.register("memorized_qwen", MemorizedQwenConfig)
+AutoModelForCausalLM.register(MemorizedQwenConfig, LaCTQwen3Model)
 
 
 def parse_args():

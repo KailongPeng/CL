@@ -1,4 +1,4 @@
-# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\infer_seq.sh
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\infer_seq_mem.sh
 # #!bin/bash
 # port=$(shuf -i25000-30000 -n1)
 # deepspeed --include=localhost:0 --master_port $port inference/infer_single.py  \
@@ -15,14 +15,14 @@
 #     --inference_output_path /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive/predictions > /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive/infer.log 2>&1 &
 
 
-# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\infer_seq.sh
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\infer_seq_mem.sh
 #!/bin/bash
 # 随机生成端口
 port=$(shuf -i25000-30000 -n1)
 
 # ====== 👇 请修改这里 (保持与 train 脚本一致) 👇 ======
 # 1. 原始底座模型路径
-tag="qwen"
+tag="SMAG"
 if [ "$tag" == "qwen" ]; then
     BASE_MODEL_PATH="/path/to/your/Qwen-0.6B" 
 else
@@ -50,12 +50,12 @@ echo ">>> 加载微调权重: $TRAIN_OUTPUT_DIR/0"
 
 deepspeed --include localhost:4,5,6,7 --master_port $port inference/infer_single.py \
     --data_path $DATA_PATH \
-    --inference_tasks C-STANCE,FOMC,MeetingBank,Py150,ScienceQA,NumGLUE-cm,NumGLUE-ds,20Minuten \
+    --inference_tasks C-STANCE \
     --model_name_or_path $BASE_MODEL_PATH \
     --inference_model_path ${TRAIN_OUTPUT_DIR} \
     --inference_batch 1 \
-    --max_prompt_len 2048 \
-    --max_ans_len 512 \
+    --max_prompt_len 256 \
+    --max_ans_len 128 \
     --seed 42 \
     --deepspeed \
     --CL_method lora \

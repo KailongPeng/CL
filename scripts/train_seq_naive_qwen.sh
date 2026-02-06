@@ -44,11 +44,11 @@ mkdir -p $OUTPUT_DIR
 echo ">>> 开始冒烟测试..."
 echo ">>> 目标：验证模型加载、Tokenizer修复、DeepSpeed启动是否正常"
 
-deepspeed --include localhost:6,7 --master_port $port training/main.py \
+deepspeed --include localhost:4,5,6,7 --master_port $port training/main.py \
     --data_path $DATA_PATH \
     --dataset_name C-STANCE,FOMC,MeetingBank,Py150,ScienceQA,NumGLUE-cm,NumGLUE-ds,20Minuten \
     --model_name_or_path $MODEL_PATH \
-    --per_device_train_batch_size 4 \
+    --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 16 \
     --gradient_accumulation_steps 8 \
     --max_prompt_len 2048 \

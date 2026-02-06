@@ -1,3 +1,4 @@
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\infer_lora.sh
 #!bin/bash
 port=$(shuf -i25000-30000 -n1)
 deepspeed --include=localhost:0 --master_port $port inference/infer_single.py \

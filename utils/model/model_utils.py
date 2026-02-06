@@ -36,7 +36,9 @@ def create_hf_model(model_class,
         model_name_or_path,
         from_tf=bool(".ckpt" in model_name_or_path),
         config=model_config,
-        trust_remote_code=True)
+        trust_remote_code=True,
+        attn_implementation="flash_attention_2",  # <--- 在这里添加这一行
+        torch_dtype=torch.bfloat16)
 
     # llama use eos_token_id but not end_token_id
     model.config.end_token_id = tokenizer.eos_token_id
