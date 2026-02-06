@@ -48,7 +48,7 @@ echo ">>> 加载微调权重: $TRAIN_OUTPUT_DIR/0"
 # 3. --inference_model_path : 指向 ${TRAIN_OUTPUT_DIR}/0 (因为你之前的日志显示保存到了 .../0)
 # 4. --inference_batch 1 : 设为 1 保证显存安全，验证通过后再调大
 
-deepspeed --include localhost:4,5,6,7 --master_port $port inference/infer_single.py \
+deepspeed --include localhost:6 --master_port $port inference/infer_single.py \
     --data_path $DATA_PATH \
     --inference_tasks C-STANCE \
     --model_name_or_path $BASE_MODEL_PATH \

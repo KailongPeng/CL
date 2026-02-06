@@ -20,11 +20,37 @@ def create_hf_model(model_class,
                     tokenizer,
                     ds_config=None,
                     disable_dropout=False,
+                    args=None
                     ):
     model_config = AutoConfig.from_pretrained(model_name_or_path, trust_remote_code=True)
 
     if disable_dropout:
         model_config.dropout = 0.0
+
+    if args is not None:
+        # 注入 num_sinks
+        if hasattr(args, "num_sinks"):
+            model_config.num_sinks = args.num_sinks
+        
+        # 注入 use_sink (注意处理字符串 "False"/"True" 转布尔值)
+        if hasattr(args, "use_sink"):
+            # 如果传入的是字符串，转为 bool；如果是 bool 则直接用
+            if isinstance(args.use_sink, str):
+                model_config.use_sink = (args.use_sink.lower() == 'true')
+            else:
+                model_config.use_sink = bool(args.use_sink)
+                
+        # 注入 sliding_window
+        if hasattr(args, "sliding_window"):
+            model_config.sliding_window = args.sliding_window
+            
+        # 注入 segment_size
+        if hasattr(args, "segment_size"):
+            model_config.segment_size = args.segment_size
+            
+        print(f"Injecting config: use_sink={getattr(model_config, 'use_sink', 'N/A')}, num_sinks={getattr(model_config, 'num_sinks', 'N/A')}")
+    # =============================================================
+    
     # Note: dschf is defined in function scope to avoid global effects
     # https://huggingface.co/docs/transformers/main_classes/deepspeed#nontrainer-deepspeed-integration
     if ds_config is not None and ds_config["zero_optimization"]["stage"] == 3:

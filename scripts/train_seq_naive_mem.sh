@@ -63,11 +63,15 @@ deepspeed --include localhost:7 --master_port $port training/main.py \
     --deepspeed \
     --print_loss \
     --CL_method lora \
-    --output_dir $OUTPUT_DIR > $OUTPUT_DIR/test.log 2>&1 &
+    --num_sinks 0 \
+    --use_sink False \
+    --sliding_window 2048 \
+    --segment_size 2048 \
+    --output_dir $OUTPUT_DIR > $OUTPUT_DIR/train.log 2>&1 &
 
 
 echo ">>> 任务已提交！请立即执行下面这行命令查看日志："
-echo "tail -f $OUTPUT_DIR/test.log"
+echo "tail -f $OUTPUT_DIR/train.log"
 
 
 # 150 服务器， 环境是mllm_kailong

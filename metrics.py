@@ -51,10 +51,16 @@ def caculate_bleu(results, data, gram):
 ## Rouge-L
 ########################
 def score_rouge(str1, str2):
-    rouge = Rouge(metrics=["rouge-l"])
-    scores = rouge.get_scores(str1, str2, avg=True)
-    rouge_l = scores['rouge-l']['f']
-    return rouge_l
+    try:
+        rouge = Rouge(metrics=["rouge-l"])
+        scores = rouge.get_scores(str1, str2, avg=True)
+        rouge_l = scores['rouge-l']['f']
+        return rouge_l
+    except Exception as e:
+        # 打印报错内容和导致报错的输入，方便你后续排查
+        print(f"[Rouge Error] {e} | Inputs: ref='{str1}', pred='{str2}'")
+        # 返回0分，保证程序继续运行
+        return 0.0
 
 
 def caculate_rouge(results, data):

@@ -234,6 +234,12 @@ def main():
                                 ds_config=None,
                                 )
         
+
+        # print(f"当前模型加载后的默认格式: {model.dtype}") 
+        # # 进行转换
+        # model = model.to(torch.bfloat16)
+        # print(f"转换后的格式: {model.dtype}")
+
         # TODO: add adapters
         if args.CL_method == "LFPT5":
             from peft import PeftModel
@@ -292,6 +298,21 @@ def main():
             for name, param in model.named_parameters():
                 param.data.copy_(inference_model[name])
             del inference_model
+        
+        # # ==================== ♻️ 移动到这里：在所有 Adapter 加载完后统一转换 ====================
+        # # 再次强制确保整个模型（包括刚刚加载的 LoRA/Adapter）都是 BFloat16
+        # if torch.cuda.is_bf16_supported():
+        #     print_rank_0(">>> [Info] Final check: Converting ENTIRE model to BFloat16...", args.local_rank)
+        #     for param in model.parameters():
+        #         # 只有浮点类型的参数才转换，避免影响整数类型的 buffer
+        #         if param.requires_grad or param.dtype in [torch.float16, torch.float32]:
+        #             param.data = param.data.to(torch.bfloat16)
+        #     # 同时也调用模型级别的转换以防万一
+        #     model = model.to(torch.bfloat16)
+        # else:
+        #     print_rank_0(">>> [Info] GPU no BF16 support. Converting to Float32...", args.local_rank)
+        #     model = model.to(torch.float32)
+        # # ===================================================================================
 
         model.to(device)
 

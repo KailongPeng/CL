@@ -23,7 +23,7 @@
 #     --output_dir /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive > /mnt/data/user/zhang_yuansen/outputs_LLM-CL/naive/train.log 2>&1 &
 
 
-# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\train_seq_naive.sh
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\scripts\train_seq_naive_qwen.sh
 #!/bin/bash
 # 随便生成一个端口
 port=$(shuf -i25000-30000 -n1)
@@ -63,11 +63,11 @@ deepspeed --include localhost:4,5,6,7 --master_port $port training/main.py \
     --deepspeed \
     --print_loss \
     --CL_method lora \
-    --output_dir $OUTPUT_DIR > $OUTPUT_DIR/test.log 2>&1 &
+    --output_dir $OUTPUT_DIR > $OUTPUT_DIR/train.log 2>&1 &
 
 
 echo ">>> 任务已提交！请立即执行下面这行命令查看日志："
-echo "tail -f $OUTPUT_DIR/test.log"
+echo "tail -f $OUTPUT_DIR/train.log"
 
 
 # 150 服务器， 环境是mllm_kailong
