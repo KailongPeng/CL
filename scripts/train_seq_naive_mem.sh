@@ -44,27 +44,27 @@ mkdir -p $OUTPUT_DIR
 echo ">>> 开始冒烟测试..."
 echo ">>> 目标：验证模型加载、Tokenizer修复、DeepSpeed启动是否正常"
 
-deepspeed --include localhost:4,5,6,7 --master_port $port training/main.py \
+deepspeed --include localhost:0 --master_port $port training/main.py \
     --data_path $DATA_PATH \
     --dataset_name C-STANCE,FOMC,MeetingBank,Py150,ScienceQA,NumGLUE-cm,NumGLUE-ds,20Minuten \
     --model_name_or_path $MODEL_PATH \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 16 \
-    --gradient_accumulation_steps 8 \
+    --gradient_accumulation_steps 16 \
     --max_prompt_len 2048 \
     --max_ans_len 512\
     --learning_rate 1e-5 \
     --weight_decay 0. \
     --num_train_epochs 5,3,7,5,3,5,5,7 \
     --lr_scheduler_type cosine \
-    --num_warmup_steps 0 \
+    --num_warmup_steps 20 \
     --seed 42 \
     --zero_stage 2 \
     --deepspeed \
     --print_loss \
     --CL_method lora \
     --num_sinks 128 \
-    --use_sink False \
+    --use_sink True \
     --sliding_window 2048 \
     --segment_size 2048 \
     --output_dir $OUTPUT_DIR > $OUTPUT_DIR/train.log 2>&1 &
@@ -74,4 +74,4 @@ echo ">>> 任务已提交！请立即执行下面这行命令查看日志："
 echo "tail -f $OUTPUT_DIR/train.log"
 
 
-# 150 服务器， 环境是mllm_kailong
+# 150 服务器， 环境是 efficient_qwen_kailong

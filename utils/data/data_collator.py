@@ -1,10 +1,12 @@
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\utils\data\data_collator.py
 import logging
 import torch
-from transformers.data.data_collator import *
+from transformers.data.data_collator import dataclass,Optional,Any,Union,PreTrainedTokenizerBase,PaddingStrategy
 from inference.ICL import TASK_PROMT, Constrained_PROMPT
 
 logger = logging.getLogger(__name__)
 
+testMode = True
 
 @dataclass
 class DataCollator:
@@ -68,17 +70,54 @@ class DataCollator:
         actual_max_len = 0  # 用于存储batch中的实际最大长度
         limit_len = self.max_prompt_len + self.max_ans_len if not self.inference else self.max_prompt_len
 
-        for instance in batch:
+        # 使用 enumerate 以便我们能识别出 batch 中的第一个样本进行打印
+        for i, instance in enumerate(batch):
             instruction = instance['prompt']
             label = instance['answer']
             sources.append(instruction)
             gts.append(label)
+            
+            if testMode:
+                # ================= [DEBUG START] =================
+                # 仅在 Rank 0 (主进程) 且是 Batch 的第一个样本时打印，避免刷屏
+                if i == 0:
+                    is_main_process = True
+                    if torch.distributed.is_initialized() and torch.distributed.get_rank() != 0:
+                        is_main_process = False
+                    
+                    if is_main_process:
+                        print(f"\n{'='*20} [Data Collator Meta Data] {'='*20}")
+                        # 1. 打印 Keys
+                        print(f"Sample Keys: {list(instance.keys())}")
+                        
+                        # 2. 单词数 (基于空格粗略计算)
+                        prompt_words = len(instruction.split())
+                        ans_words = len(label.split())
+                        print(f"Word Count -> Prompt: {prompt_words}, Answer: {ans_words}")
+                # =================================================
 
             if not self.inference:
                 tokenized_label = self.tokenize(label, limit_len, add_bos_token=False, add_eos_token=True)
                 tokenize_source = self.tokenize(instruction + label, limit_len, add_bos_token=True, add_eos_token=True)
                 label_lens.append(len(tokenized_label["input_ids"]))
                 tokenized_sources.append(tokenize_source)
+                
+                if testMode:
+                    # ================= [DEBUG INFO Continue] =================
+                    if i == 0 and is_main_process:
+                        # 3. 打印真实的 Token 数 (Padding前)
+                        print(f"Token Count -> Prompt+Ans: {len(tokenize_source['input_ids'])}, Label portion: {len(tokenized_label['input_ids'])}")
+                        
+                        # 4. 打印截断预览 (前50个字符，替换换行符以免排版混乱)
+                        safe_prompt = instruction.replace('\n', ' ')
+                        safe_label = label.replace('\n', ' ')
+                        # 打印前 50 个字符，如果太短则全部打印
+                        p_cut = 50
+                        print(f"Prompt (Top {p_cut}): {safe_prompt[:p_cut]}...")
+                        print(f"Answer (Top {p_cut}): {safe_label[:p_cut]}...")
+                        print(f"{'='*60}\n")
+                    # =========================================================
+
             else:
                 if self.demonstrations!=None:
                     task_prompt = ""
@@ -99,6 +138,15 @@ class DataCollator:
                     instruction = task_prompt+instruction
                 tokenize_source = self.tokenize(instruction, limit_len, add_bos_token=True, add_eos_token=False)
                 tokenized_sources.append(tokenize_source)
+
+                if testMode:
+                    # ================= [DEBUG INFO Inference] =================
+                    if i == 0 and is_main_process:
+                        print(f"Token Count -> Input: {len(tokenize_source['input_ids'])}")
+                        safe_prompt = instruction.replace('\n', ' ')
+                        print(f"Prompt (Top 50): {safe_prompt[:50]}...")
+                        print(f"{'='*60}\n")
+                    # ==========================================================
 
             if len(tokenize_source["input_ids"]) > actual_max_len:
                 actual_max_len = len(tokenize_source["input_ids"])
