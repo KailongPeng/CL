@@ -1,7 +1,8 @@
 # D:\Desktop\files\huawei\repo\continual_learning\TRACE\utils\data\data_collator.py
 import logging
 import torch
-from transformers.data.data_collator import dataclass,Optional,Any,Union,PreTrainedTokenizerBase,PaddingStrategy
+# from transformers.data.data_collator import dataclass,Optional,Any,Union,PreTrainedTokenizerBase,PaddingStrategy
+from transformers.data.data_collator import *
 from inference.ICL import TASK_PROMT, Constrained_PROMPT
 
 logger = logging.getLogger(__name__)

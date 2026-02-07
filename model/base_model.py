@@ -75,6 +75,7 @@ class CL_Base_Model:
         eval_dataloader = self.eval_task_list[task]
         total_steps = epochs * len(train_dataloader)
         progress_bar = tqdm(total=total_steps, leave=True, disable=(self.args.global_rank != 0))
+        
         for epoch in range(epochs):
             print_rank_0(
                 f"Beginning of Epoch {epoch+1}/{epochs}, Total Micro Batches {len(train_dataloader)}",
@@ -86,6 +87,35 @@ class CL_Base_Model:
                 batch = to_device(batch, device)
                 outputs = self.model(**batch, use_cache=False)
                 loss = outputs.loss
+
+                testMode = True
+                if testMode:
+                    # ======================= [Start] 新增修改部分 =======================
+                    # 仅在主进程打印，且为了不严重拖慢训练，可以加上 if step % 10 == 0: 的判断
+                    # 但既然你要求“每一个step”，这里就不加频率限制了
+                    if self.args.global_rank == 0:
+                        # 1. 获取 Logits: [batch_size, seq_len, vocab_size]
+                        logits = outputs.logits
+                        # 2. 获取预测的 Token ID (Argmax): [batch_size, seq_len]
+                        pred_ids = torch.argmax(logits, dim=-1)
+
+                        # 3. 取 Batch 中的第一条数据 (索引 0)
+                        input_seq_ids = batch['input_ids'][0]
+                        pred_seq_ids = pred_ids[0]
+
+                        # 4. 解码成字符串
+                        # input_text: 实际喂给模型的输入
+                        # pred_text: 模型在这个位置预测输出的下一个 token 组成的序列
+                        input_text = self.tokenizer.decode(input_seq_ids, skip_special_tokens=True)
+                        pred_text = self.tokenizer.decode(pred_seq_ids, skip_special_tokens=True)
+
+                        # 5. 打印对比
+                        print(f"\n{'='*20} Step {step} Monitor {'='*20}")
+                        print(f"\n[Input Text]:\n{input_text[:200]}...") # 只打印前200字符，避免刷屏太长
+                        print(f"\n[Model Pred]:\n{pred_text[:200]}...") # 这里的 Pred 是模型根据当前字预测的“下一个字”
+                        print(f"\n{'='*55}\n")
+                    # ======================= [End] 新增修改部分 =======================
+
                 # Update the description to include current step and loss, if needed
                 if self.args.global_rank == 0:
                     # Update the progress bar
@@ -96,15 +126,6 @@ class CL_Base_Model:
                 self.model.backward(loss)
                 # Correct gradient accumulation steps are handled withing the deepspeed engine's backward call.
                 self.model.step()
-
-
-            # Evaluate perplexity on the validation set.
-            # print_rank_0(
-            #     f"***** Evaluating perplexity, Epoch {epoch+1}/{epochs} *****",
-            #     self.args.global_rank)
-            # perplexity = self.perplexity_evaluation(eval_dataloader, device)
-            # print_rank_0(f"ppl: {perplexity}", self.args.global_rank)
-            # self.model.tput_timer.update_epoch_count()
     
     
     def train_continual(self):
