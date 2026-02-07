@@ -63,19 +63,20 @@ class DataCollator:
 
     # support decoder-only models for left padding
     def decoder_call(self, batch, return_tensors):
-
+        # ================= [DEBUG CONFIG - 修复版] =================
+        # 1. 设置想要监控的步数 (根据你的日志，这里直接对应 Step 数)
         TARGET_STEPS = [14, 15, 16, 17] 
         
-        # 初始化计数器
+        # 2. 初始化计数器
         if not hasattr(self, 'total_micro_step_count'):
             self.total_micro_step_count = 0
             
-        # 获取当前步数
+        # 3. 获取当前步数
         current_step = self.total_micro_step_count
         
-        # 判断是否需要打印
+        # 4. 判断是否需要打印
         should_print = testMode and (current_step in TARGET_STEPS)
-        # =================================================
+        # ==========================================================
 
         sources = []
         gts = []
@@ -97,12 +98,11 @@ class DataCollator:
                     is_main_process = False
                 
                 if is_main_process:
-                    # 修正：移除旧的 current_global_step，改用 current_step
+                    # 【重要】这里已经修改为使用 current_step，不会再报错了
                     print(f"\n{'='*10} [DEBUG: Step {current_step}] {'='*10}")
                     print(f"Sample Keys: {list(instance.keys())}")
-                    # 简单统计
                     print(f"Word Count -> Prompt: {len(instruction.split())}, Answer: {len(label.split())}")
-            # ====================================================================
+            # ===================================================
 
             if not self.inference:
                 tokenized_label = self.tokenize(label, limit_len, add_bos_token=False, add_eos_token=True)
@@ -115,19 +115,16 @@ class DataCollator:
                     src_len = len(tokenize_source['input_ids'])
                     print(f"Token Count -> Total: {src_len} (Limit: {limit_len})")
                     if src_len >= limit_len:
-                        print(f"⚠️  [WARNING] Max length reached/exceeded!")
+                        print(f"⚠️  [WARNING] Max length reached!")
                     
-                    # 打印内容预览（防止乱码）
                     safe_prompt = instruction.replace('\n', ' ')
                     safe_label = label.replace('\n', ' ')
-                    # 打印前 100 字符
                     print(f"Prompt (Top 100): {safe_prompt[:100]}...")
                     print(f"Answer (Top 100): {safe_label[:100]}...")
                     print(f"{'='*40}\n")
                 # ===================================================
 
             else:
-                # Inference logic (unchanged structure)
                 if self.demonstrations!=None:
                     task_prompt = ""
                     task_prompt += TASK_PROMT[self.task]
@@ -153,9 +150,9 @@ class DataCollator:
             if len(tokenize_source["input_ids"]) > actual_max_len:
                 actual_max_len = len(tokenize_source["input_ids"])
         
-        # ================= [CRITICAL: Increment Counter] =================
+        # ================= [计数器自增] =================
         self.total_micro_step_count += 1
-        # =================================================================
+        # ================================================
 
         actual_pad_len = (
                     (actual_max_len + self.pad_to_multiple_of - 1) // self.pad_to_multiple_of * self.pad_to_multiple_of)
