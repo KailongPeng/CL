@@ -70,19 +70,20 @@ class DataCollator:
         if not hasattr(self, 'total_micro_step_count'):
             self.total_micro_step_count = 0
             
-        # 直接判断：只要当前计数在目标列表中，且 testMode 开启，就打印
-        should_print = testMode and (self.total_micro_step_count in TARGET_STEPS)
-        current_step_label = self.total_micro_step_count
-        # ================= [MINIMAL FIX END] =================
+        # 获取当前步数
+        current_step = self.total_micro_step_count
+        
+        # 判断是否需要打印
+        should_print = testMode and (current_step in TARGET_STEPS)
+        # =================================================
 
         sources = []
         gts = []
         tokenized_sources = []
-        label_lens = []  # 用于存储每个label的长度
-        actual_max_len = 0  # 用于存储batch中的实际最大长度
+        label_lens = [] 
+        actual_max_len = 0 
         limit_len = self.max_prompt_len + self.max_ans_len if not self.inference else self.max_prompt_len
 
-        # 使用 enumerate 以便我们能识别出 batch 中的第一个样本进行打印
         for i, instance in enumerate(batch):
             instruction = instance['prompt']
             label = instance['answer']
@@ -96,11 +97,12 @@ class DataCollator:
                     is_main_process = False
                 
                 if is_main_process:
-                    print(f"\n{'='*10} [DEBUG: Step {current_step_label}] {'='*10}")
+                    # 修正：移除旧的 current_global_step，改用 current_step
+                    print(f"\n{'='*10} [DEBUG: Step {current_step}] {'='*10}")
                     print(f"Sample Keys: {list(instance.keys())}")
                     # 简单统计
                     print(f"Word Count -> Prompt: {len(instruction.split())}, Answer: {len(label.split())}")
-            # ===================================================
+            # ====================================================================
 
             if not self.inference:
                 tokenized_label = self.tokenize(label, limit_len, add_bos_token=False, add_eos_token=True)
@@ -118,6 +120,7 @@ class DataCollator:
                     # 打印内容预览（防止乱码）
                     safe_prompt = instruction.replace('\n', ' ')
                     safe_label = label.replace('\n', ' ')
+                    # 打印前 100 字符
                     print(f"Prompt (Top 100): {safe_prompt[:100]}...")
                     print(f"Answer (Top 100): {safe_label[:100]}...")
                     print(f"{'='*40}\n")
