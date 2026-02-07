@@ -6,6 +6,7 @@ from inference.ICL import TASK_PROMT, Constrained_PROMPT
 
 logger = logging.getLogger(__name__)
 
+# 全局开关
 testMode = True
 
 @dataclass
@@ -62,6 +63,24 @@ class DataCollator:
 
     # support decoder-only models for left padding
     def decoder_call(self, batch, return_tensors):
+        # ================= [STEP MONITORING CONFIG] =================
+        # 请确保这里的 gradient_accumulation_steps 与你的脚本一致 (16)
+        GRAD_ACCUM_STEPS = 16  
+        # 你想要监控的 Global Steps
+        TARGET_GLOBAL_STEPS = [14, 15, 16, 17]
+        
+        # 初始化计数器 (如果不存在)
+        if not hasattr(self, 'total_micro_step_count'):
+            self.total_micro_step_count = 0
+            
+        # 计算当前的 Global Step 和 Accumulation Step
+        current_global_step = self.total_micro_step_count // GRAD_ACCUM_STEPS
+        current_accum_step = self.total_micro_step_count % GRAD_ACCUM_STEPS
+        
+        # 判断是否需要打印
+        should_print = testMode and (current_global_step in TARGET_GLOBAL_STEPS)
+        # ============================================================
+
         # to fix the bug
         sources = []
         gts = []
@@ -77,7 +96,7 @@ class DataCollator:
             sources.append(instruction)
             gts.append(label)
             
-            if testMode:
+            if should_print:
                 # ================= [DEBUG START] =================
                 # 仅在 Rank 0 (主进程) 且是 Batch 的第一个样本时打印，避免刷屏
                 if i == 0:
@@ -86,7 +105,7 @@ class DataCollator:
                         is_main_process = False
                     
                     if is_main_process:
-                        print(f"\n{'='*20} [Data Collator Meta Data] {'='*20}")
+                        print(f"\n{'='*10} [Global Step {current_global_step} | Accum {current_accum_step}/{GRAD_ACCUM_STEPS}] {'='*10}")
                         # 1. 打印 Keys
                         print(f"Sample Keys: {list(instance.keys())}")
                         
@@ -102,17 +121,23 @@ class DataCollator:
                 label_lens.append(len(tokenized_label["input_ids"]))
                 tokenized_sources.append(tokenize_source)
                 
-                if testMode:
+                if should_print:
                     # ================= [DEBUG INFO Continue] =================
                     if i == 0 and is_main_process:
                         # 3. 打印真实的 Token 数 (Padding前)
-                        print(f"Token Count -> Prompt+Ans: {len(tokenize_source['input_ids'])}, Label portion: {len(tokenized_label['input_ids'])}")
+                        src_len = len(tokenize_source['input_ids'])
+                        lbl_len = len(tokenized_label['input_ids'])
+                        print(f"Token Count -> Total: {src_len} (Limit: {limit_len}), Label portion: {lbl_len}")
                         
-                        # 4. 打印截断预览 (前50个字符，替换换行符以免排版混乱)
+                        # 警告：检查是否达到长度限制
+                        if src_len >= limit_len:
+                            print(f"⚠️ [WARNING] Sample reached MAX LENGTH ({limit_len})! Possible truncation.")
+
+                        # 4. 打印截断预览 (前100个字符，替换换行符以免排版混乱)
                         safe_prompt = instruction.replace('\n', ' ')
                         safe_label = label.replace('\n', ' ')
-                        # 打印前 50 个字符，如果太短则全部打印
-                        p_cut = 50
+                        
+                        p_cut = 100
                         print(f"Prompt (Top {p_cut}): {safe_prompt[:p_cut]}...")
                         print(f"Answer (Top {p_cut}): {safe_label[:p_cut]}...")
                         print(f"{'='*60}\n")
@@ -139,7 +164,7 @@ class DataCollator:
                 tokenize_source = self.tokenize(instruction, limit_len, add_bos_token=True, add_eos_token=False)
                 tokenized_sources.append(tokenize_source)
 
-                if testMode:
+                if should_print:
                     # ================= [DEBUG INFO Inference] =================
                     if i == 0 and is_main_process:
                         print(f"Token Count -> Input: {len(tokenize_source['input_ids'])}")
@@ -150,6 +175,11 @@ class DataCollator:
 
             if len(tokenize_source["input_ids"]) > actual_max_len:
                 actual_max_len = len(tokenize_source["input_ids"])
+        
+        # ================= [COUNTER INCREMENT] =================
+        # 非常重要：每次调用必须增加计数器
+        self.total_micro_step_count += 1
+        # =======================================================
 
         # 取batch中的最大长度和limit_input_len中的最小值作为实际padding长度
         # 并确保长度是pad_to_multiple_of的倍数
