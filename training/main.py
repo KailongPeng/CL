@@ -218,6 +218,11 @@ def parse_args():
 
 def main():
     args = parse_args()
+    
+    # ================= 🚨 新增：开启异常检测 🚨 =================
+    # 这会降低运行速度，但能帮你找到导致 NaN 的确切代码行（例如前向传播里的数学错误）
+    torch.autograd.set_detect_anomaly(True) 
+    # ==========================================================
 
     if args.local_rank == -1:
         device = torch.device("cuda")
@@ -235,6 +240,24 @@ def main():
                                     enable_tensorboard=args.enable_tensorboard,
                                     tb_path=args.tensorboard_path,
                                     tb_name="v2_sft")
+    
+    # ================= 🚨 [新增修改] 强制使用 FP32 🚨 =================
+    # 无论脚本参数怎么传，这里强制关闭 fp16 和 bf16
+    # 这是解决 "!!!!!!" 输出和 Loss NaN 的终极手段
+    print("\n" + "!"*40)
+    print("⚠️  正在强制修改 DeepSpeed 配置为 FP32 (Full Precision)...")
+    
+    if "fp16" not in ds_config: ds_config["fp16"] = {}
+    ds_config["fp16"]["enabled"] = False
+
+    if "bf16" not in ds_config: ds_config["bf16"] = {}
+    ds_config["bf16"]["enabled"] = True
+    ds_config["bfloat16"] = {"enabled": True}
+    
+    print(f"✅ FP16/BF16 已禁用。当前精度模式: FP32 (Float32)")
+    print("!"*40 + "\n")
+    # ==================================================================
+
     # set batch size
     ds_config[
         'train_micro_batch_size_per_gpu'] = args.per_device_train_batch_size
@@ -277,6 +300,19 @@ def main():
                             args=args
                             )
     
+    # # ================= 🚨 强制模型权重转 FP32 🚨 =================
+    # # 你的日志显示 MA 1.41 GB，这是半精度的特征。
+    # # 我们必须手动把模型转成 float()，让显存占用变成 2.5 GB 左右，才算成功。
+    # print(f"🔄 [Before] 模型数据类型: {model.dtype}")
+    
+    # # 只要 DeepSpeed 配置禁用了 fp16/bf16，我们就强制转 float32
+    # if not ds_config["fp16"]["enabled"] and not ds_config["bf16"]["enabled"]:
+    #     print("⚠️ 正在执行强制 FP32 转换 (model.float())...")
+    #     model = model.float()
+        
+    # print(f"✅ [After] 模型数据类型: {model.dtype}")
+    # # ============================================================
+
     # some CL methods can be realized by peft
     if args.CL_method == "LFPT5":
         from utils.my_peft import get_peft_model, PromptTuningInit, PromptTuningConfig, LoraConfig, TaskType
@@ -321,10 +357,12 @@ def main():
         peft_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,
             inference_mode=False, # 告诉 PEFT “我现在要训练”，它会启用 Dropout，并确保梯度可以计算。
-            r=64,  # 秩（Rank）。这是 LoRA 中最重要的参数，决定了外挂模块的“大小”和“容量”
-            lora_alpha=128, # 典型的 2倍 r 设置，稳定. 缩放系数alpha  LoRA 更新权重的公式是 $$W_{new} = W_{old} + \frac{\alpha}{r} \cdot (A \times B)$$
+            r=8,  # 秩（Rank）。这是 LoRA 中最重要的参数，决定了外挂模块的“大小”和“容量”
+            lora_alpha=16, # 典型的 2倍 r 设置，稳定. 缩放系数alpha  LoRA 更新权重的公式是 $$W_{new} = W_{old} + \frac{\alpha}{r} \cdot (A \times B)$$
             lora_dropout=0.05, # 在训练过程中，随机把 5% 的 LoRA 神经元输出置为 0。防止过拟合
-            target_modules=["gate_proj", "up_proj", "down_proj"], 
+            # target_modules=["gate_proj", "up_proj", "down_proj"], 
+            # target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+            target_modules=["gate_proj", "up_proj", "down_proj","q_proj", "k_proj", "v_proj", "o_proj"], 
         )
         model = get_peft_model(model, peft_config)
 
@@ -499,7 +537,41 @@ def main():
     # print_rank_0(f"ppl: {perplexity}", args.global_rank)
 
     # Initialize the global progress bar
+    # Train!
+    print_rank_0("***** Running training *****", args.global_rank)
 
+    # ================= 🚨 新增：梯度监控钩子 🚨 =================
+    # 这个函数会在每次反向传播计算梯度时被调用
+    def log_grad_hook(name):
+        def hook(grad):
+            # 检查 NaN (Not a Number)
+            if torch.isnan(grad).any():
+                print(f"\n💀 [NaN DETECTED] Layer: {name}")
+                print(f"   Shape: {grad.shape}")
+                print(f"   Min: {grad.min()}, Max: {grad.max()}")
+                # 可以在这里抛出异常强制停止，或者由 DeepSpeed 处理
+            
+            # 检查 Inf (无穷大，通常是梯度爆炸的前兆)
+            elif torch.isinf(grad).any():
+                print(f"\n💥 [Inf DETECTED] Layer: {name}")
+                print(f"   Shape: {grad.shape}")
+                print(f"   Min: {grad.min()}, Max: {grad.max()}")
+            
+            # 如果你想看正常的梯度统计（可选，会刷屏，建议仅在调试极个别 step 时开启）
+            # else:
+            #     if args.global_rank == 0:  # 只在主进程打印
+            #         print(f"✅ {name} grad_mean: {grad.mean().item():.6f} | std: {grad.std().item():.6f}")
+        return hook
+
+    print("🔎 正在注册梯度监控钩子...")
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            # 只监控需要训练的层 (即 LoRA 层)
+            print(f"   Watching gradient for: {name}")
+            param.register_hook(log_grad_hook(name))
+    print("🔎 钩子注册完成。\n")
+    # ==========================================================
+    
     if args.CL_method in Method2Class.keys():
         CL_Trainer = Method2Class[args.CL_method](model, tokenizer, optimizer, train_task_list, eval_task_list, test_task_list, args)
         CL_Trainer.train_continual()

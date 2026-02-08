@@ -28,7 +28,6 @@
 # 随便生成一个端口
 port=$(shuf -i25000-30000 -n1)
 
-# ====== 👇 请修改这里 👇 ======
 tag="qwen"
 if [ "$tag" == "qwen" ]; then
     MODEL_PATH="/path/to/your/Qwen-0.6B" 
@@ -50,21 +49,21 @@ deepspeed --include localhost:0 --master_port $port training/main.py \
     --model_name_or_path $MODEL_PATH \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 16 \
-    --gradient_accumulation_steps 16 \
+    --gradient_accumulation_steps 2 \
     --max_prompt_len 2048 \
     --max_ans_len 512\
     --learning_rate 1e-5 \
     --weight_decay 0. \
     --num_train_epochs 5,3,7,5,3,5,5,7 \
     --lr_scheduler_type cosine \
-    --num_warmup_steps 20 \
+    --num_warmup_steps 100 \
     --seed 42 \
     --zero_stage 2 \
     --deepspeed \
     --print_loss \
     --CL_method lora \
     --num_sinks 128 \
-    --use_sink True \
+    --use_sink False \
     --sliding_window 2048 \
     --segment_size 2048 \
     --output_dir $OUTPUT_DIR > $OUTPUT_DIR/train.log 2>&1 &
