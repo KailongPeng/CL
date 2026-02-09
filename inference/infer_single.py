@@ -164,6 +164,20 @@ def parse_args():
 def main():
     args = parse_args()
     set_random_seed(args.seed)
+
+    # # --- 修改开始：动态分配显卡 ---
+    # if args.local_rank != -1:
+    #     # 1. 设置当前进程可见的 GPU
+    #     torch.cuda.set_device(args.local_rank)
+    #     # 2. 将 device 变量指向对应的 GPU
+    #     device = torch.device("cuda", args.local_rank)
+        
+    #     # 3. 确保分布式环境已初始化 (使用 DistributedSampler 时必须)
+    #     if not dist.is_initialized():
+    #          dist.init_process_group(backend='nccl')
+    # else:
+    #     device = torch.device("cuda")
+    # # --- 修改结束 ---
     device = torch.device("cuda")
 
 
@@ -342,6 +356,11 @@ def main():
                 pad_to_multiple_of=8,
                 inference=True
             )
+            # # infer_sampler = SequentialSampler(infer_dataset)
+            # if args.local_rank != -1:
+            #     infer_sampler = DistributedSampler(infer_dataset, shuffle=False)
+            # else:
+            #     infer_sampler = SequentialSampler(infer_dataset)
             infer_sampler = SequentialSampler(infer_dataset)
             infer_dataloader = DataLoader(infer_dataset,
                                           collate_fn=inf_data_collator,

@@ -396,7 +396,8 @@ def main():
             args.local_rank,
             dataset_path,
             args.data_output_path,
-            args.seed
+            args.seed,
+            tokenizer=tokenizer,
         )
 
         # DataLoaders creation:
@@ -611,7 +612,7 @@ if __name__ == "__main__":
             "--max_prompt_len", "64",    # ⚡ 调小长度，Debug 启动更快
             "--max_ans_len", "64",       # ⚡ 调小长度
             "--learning_rate", "1e-5",
-            "--num_train_epochs", "1",
+            "--num_train_epochs", "1,1",
             "--seed", "42",
             "--zero_stage", "2",
             "--deepspeed",               # 必须保留

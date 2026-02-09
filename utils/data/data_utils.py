@@ -241,46 +241,73 @@ class PromptDataset(Dataset):
         }
 
 # 根据传入的sampls，调用dataset object，获取数据想要的部分,tokenize
-def get_prompt_dataset(current_dataset, raw_dataset, add_sys_prefix=False, sample_ratio=None):
+def get_prompt_dataset(current_dataset, raw_dataset, add_sys_prefix=False, sample_ratio=None, tokenizer=None):
     prompt_dataset = []
     answer_dataset = []
-    if sample_ratio!=None:
+    if sample_ratio is not None:
         sample_length = int(len(current_dataset) * sample_ratio)
     else:
         sample_length = len(current_dataset)
     
-    # # testMode
-    # sample_length = 10
-
     for i, tmp_data in enumerate(current_dataset):
-        if i==sample_length:
+        if i == sample_length:
             break
-        prompt_sentence = raw_dataset.get_prompt(tmp_data)  # the accept response
-        if add_sys_prefix:
-            prompt_sentence = f"{B_SYS}{DEFAULT_SYSTEM_PROMPT}{E_SYS}{prompt_sentence}"
-        answer_sentence = raw_dataset.get_answer(tmp_data)  # the reject response
+        
+        # 获取原始文本
+        raw_prompt = raw_dataset.get_prompt(tmp_data)
+        answer_sentence = raw_dataset.get_answer(tmp_data)
+
+        # ================= 🚨 核心修改 =================
+        # 判定是否使用 Chat Template
+        use_chat_template = (
+            tokenizer is not None 
+            and hasattr(tokenizer, "apply_chat_template") 
+            and tokenizer.chat_template is not None
+        )
+
+        if use_chat_template:
+            # 1. 构造标准消息
+            messages = []
+            
+            # 兼容 add_sys_prefix 参数
+            if add_sys_prefix:
+                messages.append({"role": "system", "content": DEFAULT_SYSTEM_PROMPT})
+            
+            messages.append({"role": "user", "content": raw_prompt})
+
+            # 2. 应用模板
+            prompt_sentence = tokenizer.apply_chat_template(
+                messages, 
+                tokenize=False, 
+                add_generation_prompt=True
+            )
+        else:
+            prompt_sentence = raw_prompt
+            if add_sys_prefix:
+                prompt_sentence = f"{B_SYS}{DEFAULT_SYSTEM_PROMPT}{E_SYS}{prompt_sentence}"
+        # ==========================================================
 
         prompt_dataset.append(prompt_sentence)
         answer_dataset.append(answer_sentence)
         
-
     return PromptDataset(prompt_dataset, answer_dataset)
 
 
 # step 2
 def create_dataset(local_rank, dataset_name, output_path,
-                   seed, add_sys_prefix=False, for_backbone=False, sample_ratio=None):
+                   seed, add_sys_prefix=False, for_backbone=False, sample_ratio=None, 
+                   tokenizer=None):
     # 加载数据集，用datasets接口加载好返回，此外做了train,eval,test分片
     raw_dataset = get_raw_dataset(dataset_name, output_path, seed, local_rank, for_backbone=for_backbone)
 
     train_dataset = raw_dataset.get_train_data()
-    train_dataset = get_prompt_dataset(train_dataset, raw_dataset, add_sys_prefix=add_sys_prefix, sample_ratio=sample_ratio)
+    train_dataset = get_prompt_dataset(train_dataset, raw_dataset, add_sys_prefix=add_sys_prefix, sample_ratio=sample_ratio, tokenizer=tokenizer)
 
     eval_dataset = raw_dataset.get_eval_data()
-    eval_dataset = get_prompt_dataset(eval_dataset, raw_dataset, add_sys_prefix=add_sys_prefix)
+    eval_dataset = get_prompt_dataset(eval_dataset, raw_dataset, add_sys_prefix=add_sys_prefix, tokenizer=tokenizer)
 
     test_dataset = raw_dataset.get_test_data()
-    test_dataset = get_prompt_dataset(test_dataset, raw_dataset, add_sys_prefix=add_sys_prefix)
+    test_dataset = get_prompt_dataset(test_dataset, raw_dataset, add_sys_prefix=add_sys_prefix, tokenizer=tokenizer)
 
     return train_dataset, eval_dataset, test_dataset
 
@@ -294,7 +321,8 @@ def create_prompt_dataset(local_rank,
                           add_sys_prefix=False,
                           for_backbone=False,
                           distributed=True,
-                          sample_ratio=None
+                          sample_ratio=None,
+                          tokenizer=None
                           ):
     """
     Creates the prompt dataset
@@ -303,6 +331,13 @@ def create_prompt_dataset(local_rank,
     fname = data_path
     # 为什么单独要 sft data？
     fname = f"{fname}_seed{seed}"
+
+    # 将 tokenizer 的名称加入 hash，防止不同模型的缓存混用
+    if tokenizer is not None:
+        # 获取模型名或类名，如 "Qwen/Qwen2.5..." 或 "LlamaTokenizer"
+        tok_name = getattr(tokenizer, "name_or_path", tokenizer.__class__.__name__)
+        fname = f"{fname}_{tok_name}"
+
     fname = "_".join(fname.split("/"))
     fname = hashlib.sha256(fname.encode()).hexdigest(
     )  # hash the file name to avoid too long file name
@@ -320,7 +355,8 @@ def create_prompt_dataset(local_rank,
     if local_rank <= 0:
         train_dataset, eval_dataset, test_dataset = create_dataset(
             local_rank, data_path, output_path,
-            seed, add_sys_prefix=add_sys_prefix, for_backbone=for_backbone, sample_ratio=sample_ratio)
+            seed, add_sys_prefix=add_sys_prefix, for_backbone=for_backbone, sample_ratio=sample_ratio,
+            tokenizer=tokenizer)
 
         # torch.save的数据格式可以是任意的
         # 提前准备好，可以加速预处理，torch.load 速度也会比较快
