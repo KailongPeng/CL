@@ -245,7 +245,7 @@ def main():
     # 无论脚本参数怎么传，这里强制关闭 fp16 和 bf16
     # 这是解决 "!!!!!!" 输出和 Loss NaN 的终极手段
     print("\n" + "!"*40)
-    print("⚠️  正在强制修改 DeepSpeed 配置为 FP32 (Full Precision)...")
+    # print("⚠️  正在强制修改 DeepSpeed 配置为 FP32 (Full Precision)...")
     
     if "fp16" not in ds_config: ds_config["fp16"] = {}
     ds_config["fp16"]["enabled"] = False
@@ -254,7 +254,7 @@ def main():
     ds_config["bf16"]["enabled"] = True
     ds_config["bfloat16"] = {"enabled": True}
     
-    print(f"✅ FP16/BF16 已禁用。当前精度模式: FP32 (Float32)")
+    # print(f"✅ FP16/BF16 已禁用。当前精度模式: FP32 (Float32)")
     print("!"*40 + "\n")
     # ==================================================================
 
@@ -272,9 +272,20 @@ def main():
 
     tokenizer = load_hf_tokenizer(args.model_name_or_path, fast_tokenizer=True)
 
-    # default the LLM is decoder only model, so padding side is left
+    # 将 Padding ID 设为 151643 (<|endoftext|>)，彻底避开 <|im_end|>
+    tokenizer.pad_token_id = 151643
+    tokenizer.pad_token = tokenizer.convert_ids_to_tokens(151643)
+
+    # 确保 EOS ID 是正确的
+    tokenizer.eos_token_id = 151645 # <|im_end|>
+
+    # # default the LLM is decoder only model, so padding side is left
     assert tokenizer.padding_side == 'left'
     assert tokenizer.truncation_side == "left"
+    # 强制改为右填充 (Right Padding) 用于训练
+    # tokenizer.padding_side = 'right'  # ✅ 必须强制修改
+    # tokenizer.truncation_side = 'right' # 通常配合 padding side 一起改
+    # print(f"🔄 Padding Side 强制修正为: {tokenizer.padding_side}")
 
     # Qwen 补丁：如果没有 pad_token，将其设为 eos_token
     if tokenizer.pad_token is None:
@@ -541,7 +552,7 @@ def main():
     # Train!
     print_rank_0("***** Running training *****", args.global_rank)
 
-    # ================= 🚨 新增：梯度监控钩子 🚨 =================
+    # ================= 新增：梯度监控钩子 =================
     # 这个函数会在每次反向传播计算梯度时被调用
     def log_grad_hook(name):
         def hook(grad):
