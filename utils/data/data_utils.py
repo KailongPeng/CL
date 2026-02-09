@@ -279,7 +279,8 @@ def get_prompt_dataset(current_dataset, raw_dataset, add_sys_prefix=False, sampl
             prompt_sentence = tokenizer.apply_chat_template(
                 messages, 
                 tokenize=False, 
-                add_generation_prompt=True
+                add_generation_prompt=True,
+                enable_thinking=False
             )
         else:
             prompt_sentence = raw_prompt
