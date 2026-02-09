@@ -280,12 +280,12 @@ def main():
     tokenizer.eos_token_id = 151645 # <|im_end|>
 
     # # default the LLM is decoder only model, so padding side is left
-    assert tokenizer.padding_side == 'left'
-    assert tokenizer.truncation_side == "left"
+    # assert tokenizer.padding_side == 'left'
+    # assert tokenizer.truncation_side == "left"
     # 强制改为右填充 (Right Padding) 用于训练
-    # tokenizer.padding_side = 'right'  # ✅ 必须强制修改
-    # tokenizer.truncation_side = 'right' # 通常配合 padding side 一起改
-    # print(f"🔄 Padding Side 强制修正为: {tokenizer.padding_side}")
+    tokenizer.padding_side = 'right'  # ✅ 必须强制修改
+    tokenizer.truncation_side = 'right' # 通常配合 padding side 一起改
+    print(f"🔄 Padding Side 强制修正为: {tokenizer.padding_side}")
 
     # Qwen 补丁：如果没有 pad_token，将其设为 eos_token
     if tokenizer.pad_token is None:
