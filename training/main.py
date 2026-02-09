@@ -571,11 +571,62 @@ def main():
             param.register_hook(log_grad_hook(name))
     print("🔎 钩子注册完成。\n")
     # ==========================================================
-    
+
     if args.CL_method in Method2Class.keys():
         CL_Trainer = Method2Class[args.CL_method](model, tokenizer, optimizer, train_task_list, eval_task_list, test_task_list, args)
         CL_Trainer.train_continual()
 
 
 if __name__ == "__main__":
+    import os
+    import sys
+    
+    # ================= 🔧 调试模式专用配置 🔧 =================
+    # 1. 只有在 VSCode Debug 或者是直接运行 Python 时才生效
+    #    如果你在服务器用 sh 脚本跑，不受影响（因为会有参数覆盖）
+    if len(sys.argv) == 1:  # 没有命令行参数，说明是手动点的运行
+        print("🚀 进入 VSCode 单卡 Debug 模式 (模拟 DeepSpeed 环境)...")
+
+        # --- A. 伪造 DeepSpeed 分布式环境变量 (欺骗 DeepSpeed 以为在分布式运行) ---
+        os.environ["MASTER_ADDR"] = "localhost"
+        os.environ["MASTER_PORT"] = "29500"
+        os.environ["RANK"] = "0"          # 我是主进程
+        os.environ["LOCAL_RANK"] = "0"    # 我是当前节点的第0张卡
+        os.environ["WORLD_SIZE"] = "1"    # 全世界只有我这1个进程
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0" # 只用第1张显卡
+
+        # --- B. 伪造命令行参数 (把 shell 脚本里的参数搬过来) ---
+        # 请根据你的实际路径修改下面三个变量
+        DATA_PATH = r"D:\Desktop\files\huawei\repo\continual_learning\TRACE\LLM-CL_Benchmark"
+        MODEL_PATH = r"D:\Desktop\files\huawei\repo\continual_learning\TRACE\Qwen-0.6B"
+        OUTPUT_DIR = r"./outputs_debug"
+
+        sys.argv.extend([
+            "--data_path", DATA_PATH,
+            "--dataset_name", "C-STANCE,FOMC",  # 调试时数据少一点，跑得快
+            "--model_name_or_path", MODEL_PATH,
+            "--per_device_train_batch_size", "1",
+            "--per_device_eval_batch_size", "1",
+            "--gradient_accumulation_steps", "1",
+            "--max_prompt_len", "64",    # ⚡ 调小长度，Debug 启动更快
+            "--max_ans_len", "64",       # ⚡ 调小长度
+            "--learning_rate", "1e-5",
+            "--num_train_epochs", "1",
+            "--seed", "42",
+            "--zero_stage", "2",
+            "--deepspeed",               # 必须保留
+            "--print_loss",
+            "--CL_method", "lora",
+            "--output_dir", OUTPUT_DIR,
+            "--local_rank", "0",          # 显式告诉代码我是 rank 0
+            
+            "--num_sinks", "4",        # 脚本里是 128 (默认是0，这个很重要)
+            "--use_sink", "True",
+            "--sliding_window", "512",
+            "--segment_size", "512"     # 脚本里是 2048 (默认也是2048)
+            # ===================================
+        ])
+    
+    # ===========================================================
+
     main()

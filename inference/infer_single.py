@@ -150,6 +150,10 @@ def parse_args():
     parser.add_argument('--CL_method',
             default=None,
             help='continual learning method used')
+    parser.add_argument("--num_sinks", type=int, default=0, help="Number of sink tokens.")
+    parser.add_argument("--use_sink", type=str, default="False", help="Whether to use attention sink (True/False).")
+    parser.add_argument("--sliding_window", type=int, default=2048, help="Size of the sliding window.")
+    parser.add_argument("--segment_size", type=int, default=2048, help="Size of the memory segment.")
 
     parser = deepspeed.add_config_arguments(parser)
     args = parser.parse_args()
@@ -232,6 +236,7 @@ def main():
                                 args.model_name_or_path,
                                 tokenizer,
                                 ds_config=None,
+                                args=args
                                 )
         
 

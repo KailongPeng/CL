@@ -63,6 +63,15 @@ class CL_Base_Model:
 
 
     def train_one_task(self, task, i_task, epochs):
+        # ======================= [Start] 修复 NaN 报错的关键修改 =======================
+        # 强制禁用 Flash Attention 和 Memory Efficient Attention
+        # 这里的报错是由于 CuDNN 的优化算子在反向传播时数值溢出导致的
+        # 切换回 math_sdp (标准数学实现) 虽然会稍微慢一点点，但能保证数值稳定性，解决 NaN 问题
+        # torch.backends.cuda.enable_flash_sdp(False)
+        # torch.backends.cuda.enable_mem_efficient_sdp(False)
+        # torch.backends.cuda.enable_math_sdp(True)
+        # ======================= [End] 修复 NaN 报错的关键修改 =======================
+        
         # 在单独某个任务上训练
         if self.args.local_rank == -1:
             device = torch.device("cuda")

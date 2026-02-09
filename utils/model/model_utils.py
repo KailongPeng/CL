@@ -37,9 +37,9 @@ def create_hf_model(model_class,
             if hasattr(args, "use_sink"):
                 # 如果传入的是字符串，转为 bool；如果是 bool 则直接用
                 if isinstance(args.use_sink, str):
-                    model_config.use_sink = (args.use_sink.lower() == 'true')
+                    model_config.use_attn_sink = (args.use_sink.lower() == 'true')
                 else:
-                    model_config.use_sink = bool(args.use_sink)
+                    model_config.use_attn_sink = bool(args.use_sink)
     
             # 注入 sliding_window
             if hasattr(args, "sliding_window"):
@@ -49,7 +49,7 @@ def create_hf_model(model_class,
             if hasattr(args, "segment_size"):
                 model_config.segment_size = args.segment_size
                 
-        print(f"Injecting config: use_sink={getattr(model_config, 'use_sink', 'N/A')}, num_sinks={getattr(model_config, 'num_sinks', 'N/A')}")
+        print(f"Injecting config: use_attn_sink={getattr(model_config, 'use_attn_sink', 'N/A')}, num_sinks={getattr(model_config, 'num_sinks', 'N/A')}")
     # =============================================================
 
     # Note: dschf is defined in function scope to avoid global effects
