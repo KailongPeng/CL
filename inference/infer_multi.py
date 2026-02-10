@@ -477,4 +477,72 @@ def main():
                 save_inference_results(evaluation_result, sources_sequences, predicted_sequences, ground_truths, round, infer_task_id, dataset)
 
 if __name__ == "__main__":
+    import os
+    import sys
+    import random
+
+    # ================= 🔧 VSCode Debug 模式专用 🔧 =================
+    # 只有当没有传入命令行参数时（直接点击 F5 运行），才会执行以下模拟逻辑
+    if len(sys.argv) == 1:
+        print("🚀 进入 VSCode 调试模式 (模拟 Single-GPU DeepSpeed 环境)...")
+
+        # 1. 设置模拟路径 (Windows/Linux 路径请根据实际情况调整)
+        # 注意：这里假设你在 Windows 上开发，但在 WSL 或 Linux 服务器上实际运行。
+        # 如果是纯 Windows 环境跑 DeepSpeed 可能会有兼容性问题，但在 WSL2 中是 OK 的。
+        BASE_DIR = r"D:\Desktop\files\huawei\repo\continual_learning\TRACE"
+        
+        tag = "qwen"
+        if tag == "qwen":
+            BASE_MODEL_PATH = os.path.join(BASE_DIR, "Qwen-0.6B")
+        else:
+            BASE_MODEL_PATH = os.path.join(BASE_DIR, "memorized_qwen")
+
+        DATA_PATH = os.path.join(BASE_DIR, "LLM-CL_Benchmark")
+        TRAIN_OUTPUT_DIR = os.path.join(BASE_DIR, "outputs_LLM-CL", "debug_test", tag)
+        PRED_OUTPUT_DIR = os.path.join(TRAIN_OUTPUT_DIR, "predictions")
+        DATA_OUTPUT_PATH = os.path.join(TRAIN_OUTPUT_DIR, "data_files") # infer_multi 特有的缓存路径
+
+        # 创建必要的目录
+        os.makedirs(PRED_OUTPUT_DIR, exist_ok=True)
+        os.makedirs(DATA_OUTPUT_PATH, exist_ok=True)
+
+        print(f">>> [Debug] 底座模型: {BASE_MODEL_PATH}")
+        print(f">>> [Debug] 权重目录: {TRAIN_OUTPUT_DIR}")
+
+        # 2. 模拟 DeepSpeed 分布式环境变量 (欺骗 DeepSpeed 以为自己在单卡分布式环境)
+        port = str(random.randint(25000, 30000))
+        os.environ["MASTER_ADDR"] = "127.0.0.1"
+        os.environ["MASTER_PORT"] = port
+        os.environ["RANK"] = "0"          # 全局第0个进程
+        os.environ["LOCAL_RANK"] = "0"    # 本机第0张卡
+        os.environ["WORLD_SIZE"] = "1"    # 总共只有1个进程
+        
+        # 指定使用哪张显卡进行 Debug (例如只用第0张)
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0" 
+
+        # 3. 构造 sys.argv (参数名必须与 parse_args 中定义的一致)
+        sys.argv.extend([
+            "--data_path", DATA_PATH,
+            
+            # 【注意】infer_multi.py 中参数名是 --dataset_name，且接受逗号分隔的字符串
+            "--dataset_name", "C-STANCE", # Debug 时建议只跑一个任务，节省时间
+            
+            "--model_name_or_path", BASE_MODEL_PATH,
+            "--inference_model_path", TRAIN_OUTPUT_DIR,
+            
+            # 【注意】infer_multi 需要这个参数来存放临时文件
+            "--data_output_path", DATA_OUTPUT_PATH, 
+
+            "--inference_batch", "2",     # Debug 时 batch 可以小一点
+            "--max_prompt_len", "512",
+            "--max_ans_len", "128",
+            "--seed", "42",
+            "--deepspeed",                # 触发 deepspeed配置
+            "--CL_method", "lora",
+            "--inference_output_path", PRED_OUTPUT_DIR,
+            "--local_rank", "0"           # 显式传入 local_rank
+        ])
+
+    # ===================================================================
+
     main()
