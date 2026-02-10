@@ -399,5 +399,83 @@ def main():
             print("***** Saving inference results *****")
             save_inference_results(evaluation_result, sources_sequences, predicted_sequences, ground_truths, round, inference_task_id, inference_task)
 
+
 if __name__ == "__main__":
+    import os
+    import sys
+    import random
+
+    # ================= 🔧 调试模式专用 (VSCode/PyCharm) 🔧 =================
+    # 只有当没有传入命令行参数时（直接运行 .py），才会执行以下模拟逻辑
+    if len(sys.argv) == 1:
+        print("🚀 进入 VSCode 调试模式 (模拟 Shell 脚本环境)...")
+
+        # --- 模拟 Shell: port=$(shuf -i25000-30000 -n1) ---
+        port = str(random.randint(25000, 30000))
+
+        # ====== 👇 请修改这里 (保持与 infer_seq_qwen.sh 变量名一致) 👇 ======
+        # 1. 原始底座模型路径
+        tag = "qwen"
+        
+        # 模拟 Shell: if [ "$tag" == "qwen" ]; then ... else ... fi
+        if tag == "qwen":
+            BASE_MODEL_PATH = r"D:\Desktop\files\huawei\repo\continual_learning\TRACE\Qwen-0.6B"
+        else:
+            BASE_MODEL_PATH = r"D:\Desktop\files\huawei\repo\continual_learning\TRACE\memorized_qwen"
+
+        # 2. 数据集路径
+        DATA_PATH = r"D:\Desktop\files\huawei\repo\continual_learning\TRACE\LLM-CL_Benchmark"
+
+        # 3. 刚才训练的输出目录 (脚本会自动去下面找 /0 文件夹)
+        # 模拟 Shell: TRAIN_OUTPUT_DIR="/path/.../${tag}/"
+        TRAIN_OUTPUT_DIR = fr"D:\Desktop\files\huawei\repo\continual_learning\TRACE\outputs_LLM-CL\debug_test\{tag}"
+        # ====================================================
+
+        # 推理结果保存的位置
+        # 模拟 Shell: PRED_OUTPUT_DIR="${TRAIN_OUTPUT_DIR}/predictions"
+        PRED_OUTPUT_DIR = os.path.join(TRAIN_OUTPUT_DIR, "predictions")
+        
+        # 模拟 Shell: mkdir -p $PRED_OUTPUT_DIR
+        if not os.path.exists(PRED_OUTPUT_DIR):
+            os.makedirs(PRED_OUTPUT_DIR)
+
+        print(f">>> 开始推理冒烟测试...")
+        print(f">>> 底座模型: {BASE_MODEL_PATH}")
+        print(f">>> 加载微调权重目录: {TRAIN_OUTPUT_DIR}")
+        print(f">>> 结果输出目录: {PRED_OUTPUT_DIR}")
+
+        # --- 模拟 DeepSpeed 分布式环境变量 (欺骗 DeepSpeed) ---
+        os.environ["MASTER_ADDR"] = "localhost"
+        os.environ["MASTER_PORT"] = port
+        os.environ["RANK"] = "0"
+        os.environ["LOCAL_RANK"] = "0"
+        os.environ["WORLD_SIZE"] = "1"
+        # 模拟 Shell: --include localhost:4,5,6,7 (调试时我们只用一张卡, 例如第0张)
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0" 
+
+        # --- 构造 sys.argv (对应 Shell 中的 deepspeed ... inference/infer_single.py 后面的参数) ---
+        sys.argv.extend([
+            "--data_path", DATA_PATH,
+            
+            # 对应 Shell: --inference_tasks C-STANCE,...
+            "--inference_tasks", "C-STANCE", 
+            
+            "--model_name_or_path", BASE_MODEL_PATH,
+            
+            # 对应 Shell: --inference_model_path ${TRAIN_OUTPUT_DIR}
+            "--inference_model_path", TRAIN_OUTPUT_DIR,
+            
+            "--inference_batch", "1",
+            "--max_prompt_len", "2048",
+            "--max_ans_len", "512",
+            "--seed", "42",
+            "--deepspeed",  # 必须保留
+            "--CL_method", "lora",
+            
+            # 对应 Shell: --inference_output_path $PRED_OUTPUT_DIR
+            "--inference_output_path", PRED_OUTPUT_DIR,
+            
+            "--local_rank", "0"
+        ])
+
     main()
