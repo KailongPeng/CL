@@ -1,6 +1,5 @@
-testMode = False
-
 # D:\Desktop\files\huawei\repo\continual_learning\TRACE\inference\infer_single.py
+testMode = False
 """
     >>> prompt = "Hey, are you conscious? Can you talk to me?"
     >>> inputs = tokenizer(prompt, return_tensors="pt")

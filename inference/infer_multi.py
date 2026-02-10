@@ -1,3 +1,4 @@
+# D:\Desktop\files\huawei\repo\continual_learning\TRACE\inference\infer_multi.py
 """
     >>> prompt = "Hey, are you conscious? Can you talk to me?"
     >>> inputs = tokenizer(prompt, return_tensors="pt")
@@ -290,6 +291,14 @@ def main():
     
 
     for round in range(dataset_len):
+        # -------------- Check if the checkpoint for the current round exists
+        current_ckpt_path = os.path.join(args.inference_model_path, str(round))
+        if not os.path.exists(current_ckpt_path):
+            print(f">>> Round {round} checkpoint not found at {current_ckpt_path}. Stopping inference loop.")
+            break 
+        # ----------------
+
+        print(f"\n>>> Starting Round {round} Inference ...")
         tokenizer = load_hf_tokenizer(args.model_name_or_path, fast_tokenizer=True)
 
         # default the LLM is decoder only model, so padding side is left
@@ -301,81 +310,103 @@ def main():
                                 tokenizer,
                                 ds_config=None,
                                 )
-        if args.CL_method == "LFPT5":
-            from utils.my_peft import get_peft_model, PromptTuningInit, PromptTuningConfig, LoraConfig, TaskType
+        # if args.CL_method == "LFPT5":
+        #     from utils.my_peft import get_peft_model, PromptTuningInit, PromptTuningConfig, LoraConfig, TaskType
 
-            initial_prompt = getInitialPrompt(tokenizer, prompt_token_number=300)
-            peft_config = PromptTuningConfig(
-                task_type=TaskType.CAUSAL_LM,
-                prompt_tuning_init=PromptTuningInit.TEXT,
-                num_virtual_tokens=300,
-                prompt_tuning_init_text=initial_prompt,
-                tokenizer_name_or_path=args.model_name_or_path,
-            )
-            model = get_peft_model(model, peft_config)
+        #     initial_prompt = getInitialPrompt(tokenizer, prompt_token_number=300)
+        #     peft_config = PromptTuningConfig(
+        #         task_type=TaskType.CAUSAL_LM,
+        #         prompt_tuning_init=PromptTuningInit.TEXT,
+        #         num_virtual_tokens=300,
+        #         prompt_tuning_init_text=initial_prompt,
+        #         tokenizer_name_or_path=args.model_name_or_path,
+        #     )
+        #     model = get_peft_model(model, peft_config)
 
-        if args.CL_method == "O-LoRA":
-            from utils.my_peft import get_peft_model, PromptTuningInit, PromptTuningConfig, LoraConfig, TaskType
+        # if args.CL_method == "O-LoRA":
+        #     from utils.my_peft import get_peft_model, PromptTuningInit, PromptTuningConfig, LoraConfig, TaskType
 
-            peft_config = LoraConfig(
-                task_type=TaskType.CAUSAL_LM, r=8, lora_alpha=32, lora_dropout=0.1
-            )
-            model = get_peft_model(model, peft_config)
-            for name, param in model.named_parameters():
-                if name.find("loranew_") != -1:
-                    param.requires_grad = True
-                elif name.find("lora_") != -1:
-                    param.requires_grad = False
+        #     peft_config = LoraConfig(
+        #         task_type=TaskType.CAUSAL_LM, r=8, lora_alpha=32, lora_dropout=0.1
+        #     )
+        #     model = get_peft_model(model, peft_config)
+        #     for name, param in model.named_parameters():
+        #         if name.find("loranew_") != -1:
+        #             param.requires_grad = True
+        #         elif name.find("lora_") != -1:
+        #             param.requires_grad = False
                     
-        if args.CL_method == "OGD":
-            from peft import get_peft_model, LoraConfig, TaskType
+        # if args.CL_method == "OGD":
+        #     from peft import get_peft_model, LoraConfig, TaskType
             
-            peft_config = LoraConfig(
-                task_type=TaskType.CAUSAL_LM, r=8, lora_alpha=32, lora_dropout=0.1
-            )
-            model = get_peft_model(model, peft_config)
-            for name, param in model.named_parameters():
-                if name.find("lora") != -1:
-                    param.requires_grad = True
+        #     peft_config = LoraConfig(
+        #         task_type=TaskType.CAUSAL_LM, r=8, lora_alpha=32, lora_dropout=0.1
+        #     )
+        #     model = get_peft_model(model, peft_config)
+        #     for name, param in model.named_parameters():
+        #         if name.find("lora") != -1:
+        #             param.requires_grad = True
                     
-        if args.CL_method=="PP" or args.CL_method=="L2P":
-            if "opt" in args.model_name_or_path.lower():
-                embed_tokens_shape = model.model.decoder.embed_tokens.weight.shape
-                embed_tokens = model.model.decoder.embed_tokens
+        # if args.CL_method=="PP" or args.CL_method=="L2P":
+        #     if "opt" in args.model_name_or_path.lower():
+        #         embed_tokens_shape = model.model.decoder.embed_tokens.weight.shape
+        #         embed_tokens = model.model.decoder.embed_tokens
                 
-                args.embed_tokens_dim = embed_tokens_shape[1]
-                args.embed_tokens_length = embed_tokens_shape[0]
-                args.embed_tokens = embed_tokens
-            elif "llama" in args.model_name_or_path.lower():
-                embed_tokens_shape = model.model.embed_tokens.weight.shape
-                embed_tokens = model.model.embed_tokens
+        #         args.embed_tokens_dim = embed_tokens_shape[1]
+        #         args.embed_tokens_length = embed_tokens_shape[0]
+        #         args.embed_tokens = embed_tokens
+        #     elif "llama" in args.model_name_or_path.lower():
+        #         embed_tokens_shape = model.model.embed_tokens.weight.shape
+        #         embed_tokens = model.model.embed_tokens
                 
-                args.embed_tokens_dim = embed_tokens_shape[1]
-                args.embed_tokens_length = embed_tokens_shape[0]
-                args.embed_tokens = embed_tokens
+        #         args.embed_tokens_dim = embed_tokens_shape[1]
+        #         args.embed_tokens_length = embed_tokens_shape[0]
+        #         args.embed_tokens = embed_tokens
                 
-            if args.CL_method=="PP":
-                args.prefix_len = 20
-                model = convert_PP_model(model, args)
+        #     if args.CL_method=="PP":
+        #         args.prefix_len = 20
+        #         model = convert_PP_model(model, args)
                 
-            elif args.CL_method=="L2P":
-                args.pool_size = 10
-                args.prompt_length = 5
-                args.prompt_init = "uniform"
-                model = convert_L2P_model(model, args)
-                for name, params in model.named_parameters():
-                    if "prompt" not in name:
-                        params.requires_grad=False
-        inference_model_path = os.path.join(args.inference_model_path,str(round))
+        #     elif args.CL_method=="L2P":
+        #         args.pool_size = 10
+        #         args.prompt_length = 5
+        #         args.prompt_init = "uniform"
+        #         model = convert_L2P_model(model, args)
+        #         for name, params in model.named_parameters():
+        #             if "prompt" not in name:
+        #                 params.requires_grad=False
+        
+        current_ckpt_path = os.path.join(args.inference_model_path,str(round))
+        print(f"Process {args.global_rank}: Detected LoRA adapter in {current_ckpt_path}")
+        
+        # model = PeftModel.from_pretrained(model, current_ckpt_path)        
+       
+        if os.path.exists(os.path.join(current_ckpt_path, "adapter_config.json")):
+            print(f"Process {args.global_rank}: Found LoRA adapter, loading...")
+            if args.CL_method == "lora":
+                from peft import PeftModel
+                        
+                # 加载 LoRA
+                model = PeftModel.from_pretrained(model, current_ckpt_path, torch_dtype=torch.bfloat16)
+                
+                # 【关键步骤】合并权重！这对 DeepSpeed Inference 至关重要
+                # 否则 DeepSpeed 可能会忽略 LoRA 层，或者运行速度变慢
+                print(f"Process {args.global_rank}: Merging LoRA weights for DeepSpeed compatibility...")
+                model = model.merge_and_unload()
 
+        # 判断是否存在全量微调权重 (兼容 OGD/Replay 等)
+        elif os.path.exists(os.path.join(current_ckpt_path, "pytorch_model.bin")):
+            print(f"Process {args.global_rank}: Found full fine-tuned model, loading state_dict...")
+            state_dict = torch.load(os.path.join(current_ckpt_path, "pytorch_model.bin"), map_location="cpu")
+            model.load_state_dict(state_dict, strict=False)
+            del state_dict
+
+        else:
+            # 如果既没有 LoRA 也没有 bin，警告用户
+            print(f"WARNING: No trained weights found in {current_ckpt_path}! Running with Base Model.")
         
-        inference_model = torch.load(os.path.join(inference_model_path, "pytorch_model.bin"))
-        for name, param in model.named_parameters():
-            param.data.copy_(inference_model[name])
-        del inference_model
-        
-        
-        replace_with_kernel_inject = False if "falcon" in args.model_name_or_path.lower() else True
+        # replace_with_kernel_inject = False if "falcon" in args.model_name_or_path.lower() else True
+        replace_with_kernel_inject = False
         ds_engine = deepspeed.init_inference(model, mp_size=world_size, dtype=torch.bfloat16, checkpoint=None,
                                             replace_with_kernel_inject=replace_with_kernel_inject,
                                             max_out_tokens=args.max_prompt_len + args.max_ans_len)
@@ -383,6 +414,7 @@ def main():
 
         for infer_task_id in range(round+1):
             dataset = Datasets[infer_task_id]
+            print(f"--- Round {round}: Inferencing on Task {infer_task_id} ({dataset}) ---")
             dataset_path = os.path.join(args.data_path,dataset)
 
             # Prepare the data
@@ -408,6 +440,9 @@ def main():
                                         collate_fn=inf_data_collator,
                                         sampler=infer_sampler,
                                         batch_size=args.inference_batch)
+            
+            if args.global_rank == 0:
+                print(f"Start prediction for {dataset}...")
 
             progress_bar = tqdm(total=len(infer_dataloader), leave=True, disable=(args.global_rank != 0))
 
