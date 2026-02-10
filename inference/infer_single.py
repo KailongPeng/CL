@@ -186,39 +186,71 @@ def main():
         sources_sequences = []
         ground_truths = []
         model.eval()
+        
         for step, batch in enumerate(infer_dataloader):
-            # TODO, add prompts, choosen, rejected
-            # implementation, batch = {k: v.to(device) for k, v in batch.items()}
+            # 1. 暂时保存当前 batch 的 ground truths (因为后面代码会 del batch['gts'])
+            current_batch_gts = batch['gts']
+            
             sources_sequences += batch['sources']
             ground_truths += batch['gts']
+            
+            # 原有逻辑：删除不需要进模型的键
             del batch['sources']
             del batch['gts']
+            
             batch = to_device(batch, device)
             prompt_len = batch['input_ids'].shape[1]
+            
             # update progress bar
             progress_bar.update(1)
             description = f"Step {step}"
             progress_bar.set_description(description, refresh=False)
+            
             with torch.no_grad():
-                # TODO, add more inference params
-                # backbone config
-                # generate_ids = model.generate(batch['input_ids'], max_new_tokens=args.max_ans_len,
-                #                               pad_token_id=tokenizer.eos_token_id, attention_mask = batch['attention_mask'], temperature=0.7, do_sample=True, repetition_penalty=2.0 )
-                # sft config
+                # 生成
                 generate_ids = model.generate(input_ids=batch['input_ids'],
                                               attention_mask=batch['attention_mask'],
                                               max_new_tokens=args.max_ans_len,
                                               bos_token_id=tokenizer.bos_token_id,
                                               eos_token_id=tokenizer.eos_token_id,
-                                              pad_token_id=tokenizer.unk_token_id,
+                                              pad_token_id=tokenizer.unk_token_id, # 建议改为 pad_token_id
                                               temperature=args.temperature,
                                               do_sample=True,
                                               num_return_sequences=1,
                                               use_cache=True
                                               )
-            sequences = tokenizer.batch_decode(generate_ids[:, prompt_len:], skip_special_tokens=True,
+                
+                # ================= 🚨 修改开始：打印详细信息 🚨 =================
+                
+                # A. 解码模型看到的完整输入 (Input Prompt) - 保留 Special Tokens
+                input_texts = tokenizer.batch_decode(batch['input_ids'], skip_special_tokens=False)
+                
+                # B. 解码模型的预测 (Model Prediction) - 保留 Special Tokens
+                # generate_ids[:, prompt_len:] 只包含新生成的 token
+                sequences = tokenizer.batch_decode(generate_ids[:, prompt_len:], skip_special_tokens=False,
+                                                 clean_up_tokenization_spaces=False)
+                
+                # C. 逐条打印对照
+                print(f"\n{'='*20} Batch Step {step} {'='*20}")
+                for i in range(len(sequences)):
+                    print(f"🧐 [Input Prompt]:\n{input_texts[i]}")
+                    print(f"-"*10)
+                    print(f"🤖 [Model Prediction (with special tokens)]:\n{sequences[i]}")
+                    print(f"-"*10)
+                    print(f"✅ [Standard Answer (Ground Truth)]:\n{current_batch_gts[i]}")
+                    print(f"{'='*50}\n")
+                
+                # ===============================================================
+
+            # 将预测结果加入总列表 (这里为了后续评估脚本兼容，通常可以根据需要决定是否 keep special tokens)
+            # 如果评估脚本需要纯文本，这里可能需要 True；但为了 Debug，这里你的需求是看 raw output。
+            # 既然上面已经打印了带 special 的，这里为了不破坏原有评估逻辑，保持 True 或者根据评估函数要求定。
+            # 通常评估脚本不仅去空格还会去掉 special token，这里维持原样或 True 均可，关键是上面的 print 已经拿到了你要的。
+            # 这里我们保持原代码逻辑，或者你可以改成 False 如果你确定评估函数能处理
+            sequences_ = tokenizer.batch_decode(generate_ids[:, prompt_len:], skip_special_tokens=True,
                                                clean_up_tokenization_spaces=False)
-            predicted_sequences += sequences
+            predicted_sequences += sequences_
+            
         return sources_sequences, predicted_sequences, ground_truths
 
     def save_inference_results(evaluation_result: dict, sources_sequences: list, predicted_sequences: list,
@@ -395,6 +427,13 @@ def main():
             else:
                 evaluation_result = {}
 
+            # ================= 🚨 新增：打印评估指标 🚨 =================
+            print("\n" + "#"*60)
+            print(f"📊 任务 [ {inference_task} ] 评估结果:")
+            print(json.dumps(evaluation_result, indent=4, ensure_ascii=False))
+            print("#"*60 + "\n")
+            # ==========================================================
+
             # if args.global_rank <= 0:  # only one process is running
             print("***** Saving inference results *****")
             save_inference_results(evaluation_result, sources_sequences, predicted_sequences, ground_truths, round, inference_task_id, inference_task)
@@ -419,9 +458,9 @@ if __name__ == "__main__":
         
         # 模拟 Shell: if [ "$tag" == "qwen" ]; then ... else ... fi
         if tag == "qwen":
-            BASE_MODEL_PATH = r"D:\Desktop\files\huawei\repo\continual_learning\TRACE\Qwen-0.6B"
+            BASE_MODEL_PATH = "D:\Desktop\files\huawei\repo\continual_learning\TRACE\Qwen-0.6B"
         else:
-            BASE_MODEL_PATH = r"D:\Desktop\files\huawei\repo\continual_learning\TRACE\memorized_qwen"
+            BASE_MODEL_PATH = "D:\Desktop\files\huawei\repo\continual_learning\TRACE\memorized_qwen"
 
         # 2. 数据集路径
         DATA_PATH = r"D:\Desktop\files\huawei\repo\continual_learning\TRACE\LLM-CL_Benchmark"
@@ -466,7 +505,7 @@ if __name__ == "__main__":
             "--inference_model_path", TRAIN_OUTPUT_DIR,
             
             "--inference_batch", "1",
-            "--max_prompt_len", "2048",
+            "--max_prompt_len", "1024",
             "--max_ans_len", "512",
             "--seed", "42",
             "--deepspeed",  # 必须保留
