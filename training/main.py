@@ -620,8 +620,8 @@ if __name__ == "__main__":
             "--per_device_train_batch_size", "1",
             "--per_device_eval_batch_size", "1",
             "--gradient_accumulation_steps", "1",
-            "--max_prompt_len", "64",    # ⚡ 调小长度，Debug 启动更快
-            "--max_ans_len", "64",       # ⚡ 调小长度
+            "--max_prompt_len", "2048",    # ⚡ 调小长度，Debug 启动更快
+            "--max_ans_len", "512",       # ⚡ 调小长度
             "--learning_rate", "1e-5",
             "--num_train_epochs", "1,1",
             "--seed", "42",

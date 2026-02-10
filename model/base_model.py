@@ -86,6 +86,7 @@ class CL_Base_Model:
         progress_bar = tqdm(total=total_steps, leave=True, disable=(self.args.global_rank != 0))
         
         for epoch in range(epochs):
+            print(f"\n{'#'*10} Starting Epoch {epoch+1}/{epochs} for Task {i_task}: {task} {'#'*10}\n", self.args.global_rank)
             print_rank_0(
                 f"Beginning of Epoch {epoch+1}/{epochs}, Total Micro Batches {len(train_dataloader)}",
                 self.args.global_rank)
@@ -139,6 +140,7 @@ class CL_Base_Model:
     
     def train_continual(self):
         for i_task, task in enumerate(self.train_task_list):
+            print_rank_0(f"\n{'#'*10} Starting training on Task {i_task}: {task} {'#'*10}\n", self.args.global_rank)
             self.train_one_task(task, i_task, int(self.args.num_train_epochs[i_task]))
             self.save_model(i_task)
 
