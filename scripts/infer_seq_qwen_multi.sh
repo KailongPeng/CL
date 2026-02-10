@@ -50,5 +50,11 @@ deepspeed --include localhost:1,2 --master_port $port inference/infer_multi.py \
     --CL_method lora \
     --inference_output_path $PRED_OUTPUT_DIR > $TRAIN_OUTPUT_DIR/infer_multi.log 2>&1 &
 
+# === pid获取 ===
+JOB_PID=$!
+echo ">>> 任务 PID: $JOB_PID"
+echo $JOB_PID > "$TRAIN_OUTPUT_DIR/job_pid.txt"  # 可选：把 PID 存入文件方便后续查阅
+# ======================
+
 echo ">>> 推理任务已提交！请立即执行下面这行命令查看日志："
 echo "tail -f $TRAIN_OUTPUT_DIR/infer_multi.log"
