@@ -146,6 +146,22 @@ def caculate_fuzz(results, data):
 ## SARI
 ########################
 def caculate_sari(inputs, results, data):
-    sari = load_metric("sari")
-    translation_result = sari.compute(sources=inputs, predictions=results, references=[[label] for label in data]),
+    # sari = load_metric("sari")
+    from easse.sari import corpus_sari
+
+    import re
+    def normalize_output(s: str) -> str:
+        s = re.sub(r"<\|.*?\|>", "", s)      # chat tokens
+        s = re.sub(r"</?think>", "", s)      # cot tokens
+        s = re.sub(r"\b[CQA]:", "", s)       # C: A: Q:
+        s = re.sub(r"\s+", " ", s)
+        return s.strip()
+
+    inputs = [normalize_output(s) for s in inputs]
+    results = [normalize_output(s) for s in results]
+    refs = [[normalize_output(s) for s in data]]
+
+    # translation_result = sari.compute(sources=inputs, predictions=results, references=[[label] for label in data]),
+    translation_result = corpus_sari(inputs, results, refs)
+    
     return translation_result

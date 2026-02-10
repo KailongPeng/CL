@@ -1,3 +1,5 @@
+testMode = False
+
 # D:\Desktop\files\huawei\repo\continual_learning\TRACE\inference\infer_single.py
 """
     >>> prompt = "Hey, are you conscious? Can you talk to me?"
@@ -188,6 +190,10 @@ def main():
         model.eval()
         
         for step, batch in enumerate(infer_dataloader):
+            if testMode:
+                if step > 2:
+                    break
+
             # 1. 暂时保存当前 batch 的 ground truths (因为后面代码会 del batch['gts'])
             current_batch_gts = batch['gts']
             
@@ -229,16 +235,16 @@ def main():
                 # generate_ids[:, prompt_len:] 只包含新生成的 token
                 sequences = tokenizer.batch_decode(generate_ids[:, prompt_len:], skip_special_tokens=False,
                                                  clean_up_tokenization_spaces=False)
-                
-                # C. 逐条打印对照
-                print(f"\n{'='*20} Batch Step {step} {'='*20}")
-                for i in range(len(sequences)):
-                    print(f"🧐 [Input Prompt]:\n{input_texts[i]}")
-                    print(f"-"*10)
-                    print(f"🤖 [Model Prediction (with special tokens)]:\n{sequences[i]}")
-                    print(f"-"*10)
-                    print(f"✅ [Standard Answer (Ground Truth)]:\n{current_batch_gts[i]}")
-                    print(f"{'='*50}\n")
+                if testMode:
+                    # C. 逐条打印对照
+                    print(f"\n{'='*20} Batch Step {step} {'='*20}")
+                    for i in range(len(sequences)):
+                        print(f"🧐 [Input Prompt]:\n{input_texts[i]}")
+                        print(f"-"*10)
+                        print(f"🤖 [Model Prediction (with special tokens)]:\n{sequences[i]}")
+                        print(f"-"*10)
+                        print(f"✅ [Standard Answer (Ground Truth)]:\n{current_batch_gts[i]}")
+                        print(f"{'='*50}\n")
                 
                 # ===============================================================
 
@@ -427,13 +433,14 @@ def main():
                 evaluation_result = eval_20Minuten.eval(sources_sequences, predicted_sequences, ground_truths)
             else:
                 evaluation_result = {}
-
-            # ================= 🚨 新增：打印评估指标 🚨 =================
-            print("\n" + "#"*60)
-            print(f"📊 任务 [ {inference_task} ] 评估结果:")
-            print(json.dumps(evaluation_result, indent=4, ensure_ascii=False))
-            print("#"*60 + "\n")
-            # ==========================================================
+            
+            if testMode:
+                # ================= 🚨 新增：打印评估指标 🚨 =================
+                print("\n" + "#"*60)
+                print(f"📊 任务 [ {inference_task} ] 评估结果:")
+                print(json.dumps(evaluation_result, indent=4, ensure_ascii=False))
+                print("#"*60 + "\n")
+                # ==========================================================
 
             # if args.global_rank <= 0:  # only one process is running
             print("***** Saving inference results *****")
