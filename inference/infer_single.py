@@ -376,7 +376,8 @@ def main():
                 dataset_path,
                 args.data_output_path,
                 args.seed,
-                distributed=False
+                distributed=False,
+                tokenizer=tokenizer,
             )
 
             inf_data_collator = DataCollator(
