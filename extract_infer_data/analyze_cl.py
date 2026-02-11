@@ -37,11 +37,17 @@ def load_metrics(pred_dir):
             metric_name = "unknown"
             
             # 优先级提取常见的指标
-            for key in ["accuracy", "acc", "f1", "rouge-L", "exact_match"]:
+            for key in ["accuracy", "acc", "f1", "rouge-L", "exact_match", 'similarity']:
                 if key in eval_res:
                     score = eval_res[key]
                     metric_name = key
                     break
+                
+            # 如果指标是 similarity 且数值大于 1.0，说明是 0-100 分制，强制除以 100
+            if metric_name == "similarity" and score > 1.0:
+                score = score / 100.0
+                print(f"  [Auto-Fix] 检测到 {filename} 的 similarity > 1.0，已归一化为 {score:.4f}")
+            # ==============================
             
             # 如果是百分比字符串，转换为浮点数
             if isinstance(score, str) and "%" in score:
