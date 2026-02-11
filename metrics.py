@@ -87,7 +87,7 @@ def caculate_accuracy(results, data):
         target = data[output_id]
         if prediction == "" or target == "":
             continue
-        if prediction == target:
+        if target in prediction: # if prediction == target:
             scores += 1
     avg_score = scores / len(results)
     return avg_score

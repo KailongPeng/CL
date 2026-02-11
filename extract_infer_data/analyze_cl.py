@@ -8,6 +8,10 @@ import numpy as np
 # ====== 配置区域 ======
 # 指向你的 predictions 文件夹 (infer_seq_qwen.sh 中设置的 PRED_OUTPUT_DIR)
 PRED_DIR = "/path/to/your/outputs_LLM-CL/debug_test/qwen/predictions" 
+
+# 限制只分析前几轮 (设为 2 代表分析 Round 0, 1, 2)
+# 如果想分析所有，设为 None
+MAX_ROUND_FILTER = 2
 # =====================
 
 def load_metrics(pred_dir):
@@ -42,7 +46,7 @@ def load_metrics(pred_dir):
                     score = eval_res[key]
                     metric_name = key
                     break
-                
+
             # 如果指标是 similarity 且数值大于 1.0，说明是 0-100 分制，强制除以 100
             if metric_name == "similarity" and score > 1.0:
                 score = score / 100.0
@@ -171,5 +175,26 @@ def calculate_cl_metrics(data, task_list):
 if __name__ == "__main__":
     # 加载数据
     data, tasks = load_metrics(PRED_DIR)
+
+    # ====== 在这里进行过滤 ======
+    if MAX_ROUND_FILTER is not None:
+        print(f"\n[Info] 已启用过滤：只保留 Round 0 到 Round {MAX_ROUND_FILTER} 的数据...")
+        
+        # 过滤 data 列表：
+        # 条件1: 训练轮次 (Train_Round) 必须 <= 2
+        # 条件2: 测试任务ID (Test_Task_ID) 必须 <= 2 (既不看未来的模型，也不看未来的任务)
+        data = [
+            d for d in data 
+            if d['Train_Round'] <= MAX_ROUND_FILTER and d['Test_Task_ID'] <= MAX_ROUND_FILTER
+        ]
+        
+        # 过滤 task 列表：只保留 ID <= 2 的任务名
+        tasks = [t for t in tasks if t[0] <= MAX_ROUND_FILTER]
+        
+        if not data:
+            print(f"[Error] 过滤后没有剩余数据！请检查是否有 Round <= {MAX_ROUND_FILTER} 的文件。")
+            exit()
+    # ============================================
+
     # 计算 BWT 和 Average
     calculate_cl_metrics(data, tasks)
