@@ -374,6 +374,18 @@ def main():
 
         for inference_task_id in range(round+1):    # evaluation for previous tasks in a single round
             inference_task = inference_tasks[inference_task_id]
+
+            # ================= 检查文件是否存在，存在则跳过  =================
+            # 构造完整的文件路径，逻辑需与 save_inference_results 保持一致
+            # 文件名格式: results-{round}-{task_id}-{task_name}.json
+            target_filename = f"results-{round}-{inference_task_id}-{inference_task}.json"
+            target_file_path = os.path.join(args.inference_output_path, target_filename)
+
+            if os.path.exists(target_file_path):
+                print_rank_0(f">>> [Skip] 检测到结果文件已存在，跳过本次推理: {target_file_path}", args.local_rank)
+                continue
+            # ==============================================================================
+
             dataset_path = os.path.join(args.data_path, inference_task)
             # Prepare the data
             _, _, infer_dataset = create_prompt_dataset(
